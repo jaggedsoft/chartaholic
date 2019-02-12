@@ -2,12 +2,12 @@ class Chartaholic {
     reset() {
         this.zoom = 0;
         this.count = 0;
-        this.data = [];
         this.opens = [];
         this.highs = [];
         this.lows = [];
         this.closes = [];
         this.times = [];
+        this.data = [];
     }
 
     // ticks: pass an array of ohlc values.
@@ -52,10 +52,10 @@ class Chartaholic {
     }
 
     dx( x ) {
-        return Math.round( ( x - this.min_x ) / this.delta_x * this.width );
+        return ( x - this.min_x ) / this.delta_x * this.width;
     }
     dy( y ) {
-        return Math.round( this.height - ( y - this.min_y ) / this.delta_y * this.height );
+        return this.height - ( y - this.min_y ) / this.delta_y * this.height;
     }
 
     render( json = false ) {
@@ -63,10 +63,9 @@ class Chartaholic {
         this.height = this.target.clientHeight;
         if ( !json ) json = this.data;
         let data = json.slice( this.zoom * -7 );
-        //console.info( data );
-        this.wickpadding = this.width > 1500 ? 4 : this.width > 900 ? 3 : 2;
-        this.wickwidth = Math.round( this.width / data.length ) - this.wickpadding;
-        if ( this.wickwidth > 50 ) this.wickwidth = 50;
+        this.wickpadding = this.width > 1500 ? 4 : this.width > 1000 ? 2 : 1;
+        //let maxwidth = this.width / ( data.length - 1 ) - this.wickpadding;
+        this.wickwidth = 0.6; //.5
         this.min_x = Math.min( ...data.map( d => d.x ) );
         this.max_x = Math.max( ...data.map( d => d.x ) ) + 0.5;
         this.min_y = Math.min( ...data.map( d => d.l ) );
@@ -74,6 +73,7 @@ class Chartaholic {
         this.mid_y = ( this.max_y + this.min_y ) / 2;
         this.delta_y = this.max_y - this.min_y;
         this.delta_x = this.max_x - this.min_x;
+        let wickwidth = this.wickwidth, halfwick = this.wickwidth / 2;
         //console.log( `delta: ${this.delta_x}, ${this.delta_y}` );
         //console.info( `min_x: ${this.min_x}, min_y: ${this.min_y}, max_x: ${this.max_x}, max_y: ${this.max_y}` );
         //let x_ticks = scaleTicks(TICK_COUNT, MAX_X, MIN_X);
@@ -82,7 +82,7 @@ class Chartaholic {
         //let xticks = show_time ? quartileBounds(data.map(d => d.time)).map(v => `<div data-value='${moment(v).format(dateFormat)}'></div>`) : x_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
         //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
         let namespace = "http://www.w3.org/2000/svg", svg = document.createElementNS( namespace, "svg" );
-        svg.style.strokeWidth = `${this.wickwidth}px`;
+        svg.style.strokeWidth = "1px";//`${this.wickwidth}px`;
         svg.style.width = `${this.width}px`;
         svg.style.height = `${this.height}px`;
         svg.setAttributeNS( null, "class", this.theme );
@@ -90,17 +90,11 @@ class Chartaholic {
         svg.setAttributeNS( null, "height", this.height );
         for ( let tick of data ) {
             let color = tick.c >= tick.o ? 'up' : 'down';
-            let openy = this.dy( tick.o ), closey = this.dy( tick.c );
-            if ( Math.abs( openy - closey ) < 2 ) openy += 2;
-            let wick = document.createElementNS( namespace, "path" ), body = document.createElementNS( namespace, "path" );
-            wick.setAttributeNS( null, 'class', `wick ${color}` );
-            wick.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.h )}L${this.dx( tick.x )},${this.dy( tick.l )}` );
-            body.setAttributeNS( null, 'class', color );
-            body.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${openy}L${this.dx( tick.x )},${closey}` );
-            svg.appendChild( wick );
-            svg.appendChild( body );
-            //ticks += `<path class='wick ${color}' d='M${this.dx( tick.x )},${this.dy( tick.h )}L${this.dx( tick.x )},${this.dy( tick.l )}'/>
-            //        <path class='${color}' d='M${this.dx( tick.x )},${openy}L${this.dx( tick.x )},${closey}'/>`;
+            let candle = document.createElementNS( namespace, 'path' );
+            candle.setAttributeNS( null, 'class', `${color}` );
+            candle.setAttributeNS( null, 'd', `M${this.dx( tick.x + halfwick )},${this.dy( tick.h )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z` );
+            candle.setAttributeNS( null, typeof tippy == 'undefined' ? 'title' : 'data-tippy-content', `<b>${new Date( tick.time ).toLocaleString()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}` );
+            svg.appendChild( candle );
         }
         if ( this.title ) {
             //ticks += `<text alignment-baseline='hanging' x='0' y='1' class='headline'>${this.title}</text>`;
@@ -118,6 +112,7 @@ class Chartaholic {
         //this.target.onresize = this.resize.bind( this );
         this.target.innerHTML = "";
         this.target.appendChild( svg );
+        if ( typeof tippy !== "undefined" ) tippy( "path", { theme: "light", arrow: true, sticky: true, a11y: false } );
         //return this.target.innerHTML = `<svg width='${this.width}' height='${this.height}' class='${this.theme}' style='stroke-width:${this.wickwidth}px' onresize='this.resize'>${ticks}</svg>`;
     }
 
