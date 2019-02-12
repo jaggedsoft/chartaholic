@@ -26,11 +26,8 @@ svg {
     margin: auto auto;
     margin-top: 60px;
     fill: none;
-    /* stroke: #08f; */
     display: block;
-    stroke-width: 5px;
-    /* border-left: 1px solid rgba(0, 0, 0, 0.3);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.3); */
+    stroke-width:1px;
     border:1px solid rgba(0,0,0,0.3);
     font-family: "Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif;
     font-size: 12px;
@@ -38,9 +35,6 @@ svg {
 }
 
 polyline {
-    /*
-        stroke:#006600;fill:#33cc33
-        */
     stroke: #6d1e7f;
     fill: #6d1e7f;
     stroke-width: 1px;
@@ -105,9 +99,16 @@ text {
 }
 
 .standard .up {
-    stroke: #399F6E
+    stroke: #399F6E;
+    fill: #399F6E;
 }
 
 .standard .down {
-    stroke: #FE4747
+    stroke: #FE4747;
+    fill:#FE4747
+}
+
+path {
+    /* pointer-events:none;
+    user-select:none */
 }
