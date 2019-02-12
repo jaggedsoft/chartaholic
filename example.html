@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>JS Demo | Chartaholic</title>
+    <meta name='viewport' content='width=device-width,initial-scale=1'>
+    <meta name='google' content='notranslate'>
+    <meta charset='utf-8'>
+    <link rel='stylesheet' href='chartaholic.css'>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js" integrity="sha256-mpnrJ5DpEZZkwkE1ZgkEQQJW/46CSEh/STrZKOB/qoM="
+        crossorigin="anonymous"></script>
+    <script src="chartaholic.js"></script>
+    <script src="coinpaprika.js"></script>
+</head><body>
+    <div id='chart'></div>
+    <script>
+        (async () => {
+            let title = "Ethereum (ETH)";
+            let slug = "eth-ethereum";
+            let start_date = "2018-09-20";
+            let ticks = await cp.candles(slug, start_date, { limit: 366 });
+            let chart = new Chartaholic("#chart", { theme: "blue", keys: { time: "time_open" }, ticks, title });
+        })();
+    </script>
+</body></html>
