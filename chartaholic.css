@@ -71,11 +71,53 @@ text {
     text-shadow: 2px 2px rgba(0, 0, 0, 0.75);
 }
 
+.standard .lastprice {
+    stroke:none !important;
+    font: bold 20px sans-serif;
+    /* text-shadow: 1px 1px #000, 0 0 3px rgba(0,0,0,1); */
+}
+
+.blue .lastprice {
+    fill:#4db872
+}
+
+.grid {
+    stroke: #242931
+}
+
+.xaxis, .axis {
+    fill: #505674;
+    stroke: none;
+    font: 13px sans-serif;
+}
+
+
 .horizontal {
     opacity: 1;
     stroke-width: 1px;
     stroke: #6c757d;
     fill: #6c757d
+}
+
+path.structure {
+    stroke-width:1px;
+    stroke:#505675;
+    opacity:0.3
+}
+text.structure {
+    font: 5px sans-serif;
+    fill:#fff;
+    z-index:9999;
+    /*text-shadow:none;&/
+    opacity:0.6;
+    /*text-shadow: 1px 1px #000;*/
+    text-shadow: 0 0 3px rgba(0,0,0,0.75)
+}
+text.green {
+    fill: #399F6E
+}
+text.red {
+    fill: #FE4747
 }
 
 .blue .down {
@@ -86,6 +128,10 @@ text {
 .blue .up {
     stroke: #fff;
     fill: #fff;
+}
+
+.black {
+    stroke:rgba(0,0,0,0.3)
 }
 
 .light .up {
@@ -102,13 +148,13 @@ text {
     stroke: #399F6E;
     fill: #399F6E;
 }
-
 .standard .down {
     stroke: #FE4747;
     fill:#FE4747
 }
 
 path {
+    z-index:0
     /* pointer-events:none;
     user-select:none */
 }
