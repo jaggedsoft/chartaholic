@@ -10,6 +10,35 @@ class Chartaholic {
         this.data = [];
     }
 
+    // Append new candle
+    append( tick, draw = true ) {
+        let time = new Date( tick[this.keys.time] ).getTime();
+        let open = Number( tick[this.keys.open] );
+        let high = Number( tick[this.keys.high] );
+        let low = Number( tick[this.keys.low] );
+        let close = Number( tick[this.keys.close] );
+        this.opens.push( open );
+        this.highs.push( high );
+        this.lows.push( low );
+        this.closes.push( close );
+        this.times.push( time );
+        this.data.push( {
+            x: this.count++,
+            o: open,
+            h: high,
+            l: low,
+            c: close,
+            time: time
+        } );
+        if ( draw ) this.render();
+    }
+
+    // Replace last candle
+    update( tick, draw = true ) {
+
+        if ( draw ) this.render();
+    }
+
     // ticks: pass an array of ohlc values.
     // keys: default open, high, low, close, time
     import( ticks ) {
@@ -18,24 +47,7 @@ class Chartaholic {
         }
         this.reset();
         for ( let tick of ticks ) {
-            let time = new Date( tick[this.keys.time] ).getTime();
-            let open = Number( tick[this.keys.open] );
-            let high = Number( tick[this.keys.high] );
-            let low = Number( tick[this.keys.low] );
-            let close = Number( tick[this.keys.close] );
-            this.opens.push( open );
-            this.highs.push( high );
-            this.lows.push( low );
-            this.closes.push( close );
-            this.times.push( time );
-            this.data.push( {
-                x: this.count++,
-                o: open,
-                h: high,
-                l: low,
-                c: close,
-                time: time
-            } );
+            this.append( tick, false );
         }
     }
 
@@ -76,6 +88,10 @@ class Chartaholic {
     // pow(base, exponent) returns base to exponent power
     pow( base, exponent ) {
         return Math.pow( base, exponent );
+    }
+
+    getPrecision( float ) {
+        return float.toString().split( '.' )[1].length || 0;
     }
 
     timex( x ) {
@@ -121,6 +137,103 @@ class Chartaholic {
         return element;
     }
 
+    custom_structure() {
+        const today = moment(), alignment = 'middle', svg = this.svg;
+        //daily open 'day'
+        const week_open = today.startOf( 'week' ), week_cal = week_open.calendar();
+        const month_open = today.startOf( 'month' ), month_cal = month_open.calendar();
+        const quarter_open = today.startOf( 'quarter' ), quarter_cal = quarter_open.calendar();
+        const year_open = today.startOf( 'year' ), year_cal = year_open.calendar();
+        if ( month_cal == year_cal ) this.drawn.month_open = true;
+        if ( quarter_cal == year_cal ) this.drawn.quarter_open = true;
+        //if ( week_cal == year_cal || typeof this.drawn. ) this.drawn.week_open = true;
+        let tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
+        let d = moment( tick.time ), cal = d.calendar();
+        color = this.last_tick.c >= tick.o ? 'green' : 'red';
+        // Yearly Open
+        if ( year_cal == cal && typeof this.drawn.year_open == 'undefined' ) { // year_open.isSame( d, 'd' )
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'structure tip' );
+            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            this.drawn.year_open = tick.o;
+            if ( !this.gridlines ) svg.appendChild( element );
+            let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Yearly Open', 'structure ' + color, 'end', alignment, size );
+            textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            svg.appendChild( textelement );
+        }
+        // Quarterly Open
+        if ( quarter_cal == cal && typeof this.drawn.quarter_open == 'undefined' ) {
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'structure tip' );
+            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            this.drawn.quarter_open = tick.o;
+            if ( !this.gridlines ) svg.appendChild( element );
+            let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Quarterly Open', 'structure ' + color, 'end', alignment, size );
+            textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            svg.appendChild( textelement );
+        }
+        // Monthly Open
+        if ( month_cal == cal && typeof this.drawn.month_open == 'undefined' ) {
+            console.log( "monthly open", last_close, tick.o, color );
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'structure tip' );
+            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            this.drawn.month_open = tick.o;
+            if ( !this.gridlines ) svg.appendChild( element );
+            let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Monthly Open', 'structure ' + color, 'end', alignment, size );
+            textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            svg.appendChild( textelement );
+        }
+        // Weekly Open
+        if ( week_cal == cal && typeof this.drawn.week_open == 'undefined' ) {
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'structure tip' );
+            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            this.drawn.week_open = tick.o;
+            if ( !this.gridlines ) svg.appendChild( element );
+            let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Weekly Open', 'structure ' + color, 'end', alignment, size );
+            textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            svg.appendChild( textelement );
+        }
+    }
+
+    draw_grid() {
+        const last_close = this.last_tick.c;
+        let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
+        // Remove y axis beneath last price
+        let closest = this.ticks_y.reduce( function ( prev, curr ) {
+            return ( Math.abs( curr - last_close ) < Math.abs( prev - last_close ) ? curr : prev );
+        } );
+        //close_display = this.autoformat( last_close )
+        let close_display = this.format( last_close, y_axis_precision, y_axis_precision );
+        if ( close_display.length < 8 ) this.margin_right = 75;
+        if ( close_display.length < 6 ) this.margin_right = 50;
+        this.margin_x = this.width - this.margin_right;
+        this.margin_y = this.height - this.margin_bottom;
+        for ( let x of this.ticks_x ) {
+            let dx = this.timex( x );
+            //console.log( x, dx );
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'grid' );
+            element.setAttributeNS( null, 'd', `M${dx},0L${dx},${this.height - this.margin_bottom}` );
+            if ( this.gridlines ) this.svg.appendChild( element );
+            this.svg.appendChild( this.text( dx, this.height - 2, moment( x ).format( 'MMM D' ), 'xaxis', 'middle', 'start' ) );
+        }
+        let tick_distance = ( this.ticks_y[1] - this.ticks_y[0] ) / 3;
+        for ( let y of this.ticks_y ) {
+            let element = document.createElementNS( this.namespace, 'path' );
+            element.setAttributeNS( null, 'class', 'grid' );
+            element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
+            if ( this.gridlines ) this.svg.appendChild( element );
+            if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
+            this.svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
+        }
+        this.svg.appendChild( this.text( this.width, this.dy( last_close ), close_display, 'lastprice', 'end', 'middle' ) );
+    }
+
     render( json = false ) {
         this.width = this.target.clientWidth;
         this.height = this.target.clientHeight;
@@ -129,8 +242,6 @@ class Chartaholic {
         this.wickpadding = this.width > 1500 ? 4 : this.width > 1000 ? 2 : 1;
         //let maxwidth = this.width / ( data.length - 1 ) - this.wickpadding;
         let wickwidth = 0.6, halfwick = wickwidth / 2;
-        this.margin_x = this.width - this.margin_right;
-        this.margin_y = this.height - this.margin_bottom;
         if ( this.smoothing ) { // heikin ashi, etc
             /*console.info( data );
             data = this.ha( data );
@@ -144,8 +255,10 @@ class Chartaholic {
         this.max_y = Math.max( ...data.map( d => d.h ) );
         this.min_time = Math.min( ...data.map( d => d.time ) );
         this.max_time = Math.max( ...data.map( d => d.time ) );
-        this.ticks_x = this.calculateTicks( this.min_time, this.max_time, 10 );
-        this.ticks_y = this.calculateTicks( this.min_y, this.max_y, 14 );
+        this.ticks_x = this.calculateTicks( this.min_time, this.max_time, 7 );
+        this.ticks_y = this.calculateTicks( this.min_y, this.max_y, 10 );
+        //this.min_y = this.ticks_y[0];
+        //this.max_y = this.ticks_y[this.ticks_y.length - 1];
         this.delta_y = this.max_y - this.min_y;
         this.delta_x = this.max_x - this.min_x;
         this.delta_time = this.max_time - this.min_time;
@@ -158,104 +271,21 @@ class Chartaholic {
         //let dateFormat = 'll'; // https://momentjs.com
         //let xticks = show_time ? quartileBounds(data.map(d => d.time)).map(v => `<div data-value='${moment(v).format(dateFormat)}'></div>`) : x_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
         //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
-        let svg = document.createElementNS( this.namespace, "svg" ), color;
+        let svg = this.svg = document.createElementNS( this.namespace, "svg" ), color;
         //svg.style.strokeWidth = "1px";
         svg.style.width = `${this.width}px`;
         svg.style.height = `${this.height}px`;
-        svg.setAttributeNS( null, "class", this.theme );
-        svg.setAttributeNS( null, "width", this.width );
-        svg.setAttributeNS( null, "height", this.height );
-        const last_close = this.last_tick.c;
-        const today = moment();
-        //daily open 'day'
-        const week_open = today.startOf( 'week' ), week_cal = week_open.calendar();
-        const month_open = today.startOf( 'month' ), month_cal = month_open.calendar();
-        const quarter_open = today.startOf( 'quarter' ), quarter_cal = quarter_open.calendar();
-        const year_open = today.startOf( 'year' ), year_cal = year_open.calendar();
-        if ( month_cal == year_cal ) this.drawn.month_open = true;
-        if ( quarter_cal == year_cal ) this.drawn.quarter_open = true;
-        //if ( week_cal == year_cal || typeof this.drawn. ) this.drawn.week_open = true;
-        let tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
-        let closest = this.ticks_y.reduce( function ( prev, curr ) {
-            return ( Math.abs( curr - last_close ) < Math.abs( prev - last_close ) ? curr : prev );
-        } );
-        //console.log( this.ticks_x );
-        for ( let x of this.ticks_x ) {
-            let dx = this.timex( x );
-            //console.log( x, dx );
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'grid' );
-            element.setAttributeNS( null, 'd', `M${dx},0L${dx},${this.height - this.margin_bottom}` );
-            svg.appendChild( element );
-            svg.appendChild( this.text( dx, this.height - 2, moment( x ).format( 'MMM D' ), 'xaxis', 'middle', 'start' ) );
-        }
-        let tick_distance = ( this.ticks_y[1] - this.ticks_y[0] ) / 3;
-        for ( let y of this.ticks_y ) {
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'grid' );
-            element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
-            svg.appendChild( element );
-            if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
-            svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
-        }
+        svg.setAttributeNS( null, 'class', this.theme );
+        svg.setAttributeNS( null, 'width', this.width );
+        svg.setAttributeNS( null, 'height', this.height );
+        svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
+        const tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content', last_close = this.last_tick.c;
+        this.draw_grid();
         let size = ( this.width / data.length ) - 5;
         if ( size < 5 ) size = 5;
         if ( size > 20 ) size = 20;
         for ( let tick of data ) {
-            ////////////////////////////////////////////////////
-            if ( this.structure ) {
-                let d = moment( tick.time ), cal = d.calendar();
-                color = this.last_tick.c >= tick.o ? 'green' : 'red';
-                let alignment = 'middle';
-                // Yearly Open
-                if ( year_cal == cal && typeof this.drawn.year_open == 'undefined' ) { // year_open.isSame( d, 'd' )
-                    let element = document.createElementNS( this.namespace, 'path' );
-                    element.setAttributeNS( null, 'class', 'structure' );
-                    element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
-                    element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    this.drawn.year_open = tick.o;
-                    svg.appendChild( element );
-                    let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Yearly Open', 'structure ' + color, 'end', alignment, size );
-                    textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    svg.appendChild( textelement );
-                }
-                // Quarterly Open
-                if ( quarter_cal == cal && typeof this.drawn.quarter_open == 'undefined' ) {
-                    let element = document.createElementNS( this.namespace, 'path' );
-                    element.setAttributeNS( null, 'class', 'structure tip' );
-                    element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
-                    element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    this.drawn.quarter_open = tick.o;
-                    svg.appendChild( element );
-                    let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Quarterly Open', 'structure ' + color, 'end', alignment, size );
-                    textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    svg.appendChild( textelement );
-                }
-                // Monthly Open
-                if ( month_cal == cal && typeof this.drawn.month_open == 'undefined' ) {
-                    console.log( "monthly open", last_close, tick.o, color );
-                    let element = document.createElementNS( this.namespace, 'path' );
-                    element.setAttributeNS( null, 'class', 'structure tip' );
-                    element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
-                    this.drawn.month_open = tick.o;
-                    svg.appendChild( element );
-                    let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Monthly Open', 'structure ' + color, 'end', alignment, size );
-                    textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    svg.appendChild( textelement );
-                }
-                // Weekly Open
-                if ( week_cal == cal && typeof this.drawn.week_open == 'undefined' ) {
-                    let element = document.createElementNS( this.namespace, 'path' );
-                    element.setAttributeNS( null, 'class', 'structure tip' );
-                    element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
-                    element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    this.drawn.week_open = tick.o;
-                    svg.appendChild( element );
-                    let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Weekly Open', 'structure ' + color, 'end', alignment, size );
-                    textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-                    svg.appendChild( textelement );
-                }
-            }
+            if ( this.structure ) this.custom_structure();
             color = tick.c >= tick.o ? 'up' : 'down';
             let candle = document.createElementNS( this.namespace, 'path' );
             candle.setAttributeNS( null, 'class', `${color} tip` );
@@ -268,9 +298,7 @@ class Chartaholic {
         element.setAttributeNS( null, 'class', 'black' );
         element.setAttributeNS( null, 'd', `M${marginx},0L${marginx},${this.height}` );
         svg.appendChild( element );*/
-        color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
-        //svg.appendChild( this.text( marginx, this.dy( this.last_tick.c ), this.autoformat( this.last_tick.c ), 'lastprice ' + color, 'start', 'middle', size + 5 ) );
-        svg.appendChild( this.text( this.width, this.dy( last_close ), this.autoformat( last_close ), 'lastprice', 'end', 'middle' ) ); //'lastprice ' + color
+        //color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
         //<text id='mousex' alignment-baseline='hanging' x='0' y='0'></text>
@@ -293,7 +321,7 @@ class Chartaholic {
         return isFinite( value ) ? value : def;
     }
     sats( number ) {
-        if ( number <= 0.0001 ) return Math.round( number * 1e8 ) + " sats";
+        if ( number <= 0.0001 ) return Math.round( number * 1e8 ).toString();// + " sats";
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: 1, maximumFractionDigits: 8 } ).format( number );
     }
     usd( number, maxdigits = 2, mindigits = 0 ) {
@@ -304,12 +332,13 @@ class Chartaholic {
     format( number, maxPrecision = 8, minPrecision = 0 ) {
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
     }
-    autoformat( number ) {
-        if ( number >= 1000 ) return this.usd( number, 2, 0 );
-        if ( number >= 100 ) return this.usd( number, 4, 0 );
-        if ( number >= 10 ) return this.usd( number, 4, 0 );
-        if ( number < 10 ) return this.format( number, 8, 1 )
-        if ( number <= 0.1 ) return this.sats( number );//this.format( number, 8, 2 )
+    autoformat( number, minDigits = 0 ) {
+        //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
+        if ( number <= 0.0001 ) return this.sats( number );//this.format( number, 8, 2 )
+        if ( number >= 1000 ) return this.usd( number, 2, minDigits );
+        if ( number >= 100 ) return this.usd( number, 4, minDigits );
+        if ( number >= 10 ) return this.usd( number, 4, minDigits );
+        if ( number < 10 ) return this.format( number, 8, minDigits )
         return this.format( number );
     }
 
@@ -323,6 +352,7 @@ class Chartaholic {
         //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
         this.structure = typeof options.structure == "undefined" ? false : options.structure;
         this.smoothing = typeof options.smoothing == "undefined" ? false : options.smoothing;
+        this.gridlines = typeof options.gridlines == "undefined" ? true : options.gridlines;
         this.margin_right = 100;
         this.margin_bottom = 13;
         this.reset();
