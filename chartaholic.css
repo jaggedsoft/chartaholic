@@ -2,6 +2,7 @@
     margin: auto auto;
     width: 90vw;
     height: 80vh;
+    margin-top: 60px
 }
 
 body {
@@ -14,17 +15,9 @@ body {
     overflow-x: hidden
 }
 
-.candlechart {
-    margin: auto auto;
-    position: relative;
-    padding-left: 40px;
-    padding-bottom: 40px;
-}
-
 svg {
     /* filter: drop-shadow( -1px 2px 1px rgba(0,0,0,0.75)); */
     margin: auto auto;
-    margin-top: 60px;
     fill: none;
     display: block;
     stroke-width:1px;
@@ -138,10 +131,31 @@ text.red {
     stroke: #fff;
     fill: #fff
 }
-
 .light .down {
     fill: #000;
     stroke: #000
+}
+
+.hollow .up {
+    fill:none;
+    stroke:#26a69a
+}
+.hollow .down {
+    fill:none;
+    stroke:#ef5350
+}
+
+.tv .up {
+    fill:#26a69a;
+    stroke:#26a69a
+}
+.tv .down {
+    fill:#ef5350;
+    stroke:#ef5350
+}
+.tv .grid {
+    stroke:#363c4e;
+    fill: #363c4e
 }
 
 .standard .up {
