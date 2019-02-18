@@ -7,6 +7,7 @@ class Chartaholic {
         this.lows = [];
         this.closes = [];
         this.times = [];
+        this.volume = [];
         this.data = [];
     }
 
@@ -17,17 +18,20 @@ class Chartaholic {
         let high = Number( tick[this.keys.high] );
         let low = Number( tick[this.keys.low] );
         let close = Number( tick[this.keys.close] );
+        let volume = typeof tick[this.keys.volume] == "undefined" ? 0 : Number( tick[this.keys.volume] );
         this.opens.push( open );
         this.highs.push( high );
         this.lows.push( low );
         this.closes.push( close );
         this.times.push( time );
+        this.volume.push( volume );
         this.data.push( {
             x: this.count++,
             o: open,
             h: high,
             l: low,
             c: close,
+            v: volume,
             time: time
         } );
         if ( draw ) this.render();
@@ -35,20 +39,31 @@ class Chartaholic {
 
     // Replace last candle
     update( tick, draw = true ) {
-
+        let offset = this.data.length - 1;
+        this.data[offset] = tick;
         if ( draw ) this.render();
     }
 
-    // ticks: pass an array of ohlc values.
-    // keys: default open, high, low, close, time
-    import( ticks ) {
-        for ( let key of ['open', 'high', 'low', 'close', 'time'] ) {
+    // Update OHLC of last candle from trade stream
+    updateOHLC( amount, volume = 0, draw = true ) {
+        let offset = this.data.length - 1, tick = this.data[offset];
+        if ( amount > tick.h ) this.data[offset].h = amount;
+        else if ( amount < tick.l ) this.data[offset].l = amount;
+        this.data[offset].c = amount;
+        this.data[offset].v += volume;
+        if ( draw ) this.render();
+    }
+
+    // Replace all OHLC tick values
+    import( ticks, draw = true ) {
+        for ( let key of ['open', 'high', 'low', 'close', 'volume', 'time'] ) {
             if ( typeof this.keys[key] === "undefined" ) this.keys[key] = key;
         }
         this.reset();
         for ( let tick of ticks ) {
             this.append( tick, false );
         }
+        if ( draw ) this.render();
     }
 
     resize() {
@@ -90,24 +105,41 @@ class Chartaholic {
         return Math.pow( base, exponent );
     }
 
-    getPrecision( float ) {
-        return float.toString().split( '.' )[1].length || 0;
+    percent( min, max, width = 100 ) {
+        return ( min * 0.01 ) / ( max * 0.01 ) * width;
     }
 
+    getPrecision( float ) {
+        if ( !float || Number.isInteger( float ) ) return 0;
+        let digits = float.toString().split( '.' )[1];
+        return typeof digits.length == "undefined" ? 0 : digits.length;
+    }
+
+    // Drawing functions: convert world space to screen space
     timex( x ) {
-        return ( x - this.min_time ) / this.delta_time * this.margin_x;
+        return ( x - this.min_time ) / this.time_range * this.margin_x;
     }
     dx( x ) {
-        return ( x - this.min_x ) / this.delta_x * this.margin_x;
+        return ( x - this.min_x ) / this.range_x * this.margin_x;
     }
     dy( y ) {
-        return this.margin_y - ( y - this.min_y ) / this.delta_y * this.margin_y;
+        return this.margin_y - ( y - this.min_y ) / this.range_y * this.margin_y;
     }
 
-    calculateTicks( min, max, tickCount = 10 ) {
-        let span = max - min,
-            step = Math.pow( 10, Math.floor( Math.log( span / tickCount ) / Math.LN10 ) ),
-            err = tickCount / span * step;
+    // Generate range of timestamps starting from the end
+    timeRange( start, end, results = 7 ) {
+        let range = [], delta = end - start, step = Math.ceil( delta / ( results - 1 ) );
+        for ( let n = end; n > start; n -= step ) {
+            range.unshift( parseInt( n ) );
+            //let closest = this.get_closest( this.times, n );
+            //range.unshift( parseInt( closest ) );
+        }
+        return range;
+    }
+    calculateTicks( min, max, results = 10 ) {
+        let ticks = [], span = max - min,
+            step = Math.pow( 10, Math.floor( Math.log( span / results ) / Math.LN10 ) ),
+            err = results / span * step;
 
         // Filter ticks to get closer to the desired count
         if ( err <= .15 ) step *= 10;
@@ -116,13 +148,18 @@ class Chartaholic {
 
         // Round start and stop values to step interval
         let tstart = Math.ceil( min / step ) * step,
-            tstop = Math.floor( max / step ) * step + step * .5,
-            ticks = [];
+            tstop = Math.floor( max / step ) * step + step * .5;
 
         for ( let i = tstart; i < tstop; i += step ) {
             ticks.push( i );
         }
         return ticks;
+    }
+
+    get_closest( array, n ) {
+        return array.reduce( function ( prev, curr ) {
+            return ( Math.abs( curr - n ) < Math.abs( prev - n ) ? curr : prev );
+        } );
     }
 
     text( x, y, string, className = "", anchor = "start", alignment = "hanging", size = false ) {
@@ -137,7 +174,7 @@ class Chartaholic {
         return element;
     }
 
-    custom_structure() {
+    custom_structure( tick ) {
         const today = moment(), alignment = 'middle', svg = this.svg;
         //daily open 'day'
         const week_open = today.startOf( 'week' ), week_cal = week_open.calendar();
@@ -148,16 +185,20 @@ class Chartaholic {
         if ( quarter_cal == year_cal ) this.drawn.quarter_open = true;
         //if ( week_cal == year_cal || typeof this.drawn. ) this.drawn.week_open = true;
         let tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
-        let d = moment( tick.time ), cal = d.calendar();
-        color = this.last_tick.c >= tick.o ? 'green' : 'red';
+        let d = moment( tick.time ), cal = d.calendar(), last_close = this.last_tick.c
+        let color = this.last_tick.c >= tick.o ? 'green' : 'red';
+        let size = ( this.width / this.zoomdata.length ) - 5;
+        if ( size < 5 ) size = 5;
+        if ( size > 20 ) size = 20;
         // Yearly Open
         if ( year_cal == cal && typeof this.drawn.year_open == 'undefined' ) { // year_open.isSame( d, 'd' )
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
             element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
             element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.year_open = tick.o;
-            if ( !this.gridlines ) svg.appendChild( element );
+            svg.appendChild( element );
             let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Yearly Open', 'structure ' + color, 'end', alignment, size );
             textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             svg.appendChild( textelement );
@@ -168,8 +209,9 @@ class Chartaholic {
             element.setAttributeNS( null, 'class', 'structure tip' );
             element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
             element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
+            element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.quarter_open = tick.o;
-            if ( !this.gridlines ) svg.appendChild( element );
+            svg.appendChild( element );
             let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Quarterly Open', 'structure ' + color, 'end', alignment, size );
             textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             svg.appendChild( textelement );
@@ -180,8 +222,9 @@ class Chartaholic {
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
             element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.month_open = tick.o;
-            if ( !this.gridlines ) svg.appendChild( element );
+            svg.appendChild( element );
             let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Monthly Open', 'structure ' + color, 'end', alignment, size );
             textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             svg.appendChild( textelement );
@@ -196,19 +239,17 @@ class Chartaholic {
             if ( !this.gridlines ) svg.appendChild( element );
             let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Weekly Open', 'structure ' + color, 'end', alignment, size );
             textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
-            svg.appendChild( textelement );
+            this.svg.appendChild( textelement );
         }
     }
 
     draw_grid() {
-        const last_close = this.last_tick.c;
         let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
+        // Remove y axis duplicates
+        if ( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ) == this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) y_axis_precision++;
+        let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision );
         // Remove y axis beneath last price
-        let closest = this.ticks_y.reduce( function ( prev, curr ) {
-            return ( Math.abs( curr - last_close ) < Math.abs( prev - last_close ) ? curr : prev );
-        } );
-        //close_display = this.autoformat( last_close )
-        let close_display = this.format( last_close, y_axis_precision, y_axis_precision );
+        let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 8 ) this.margin_right = 75;
         if ( close_display.length < 6 ) this.margin_right = 50;
         this.margin_x = this.width - this.margin_right;
@@ -229,7 +270,7 @@ class Chartaholic {
             element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
             if ( this.gridlines ) this.svg.appendChild( element );
             if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
-            this.svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
+            this.svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
         }
         this.svg.appendChild( this.text( this.width, this.dy( last_close ), close_display, 'lastprice', 'end', 'middle' ) );
     }
@@ -238,7 +279,8 @@ class Chartaholic {
         this.width = this.target.clientWidth;
         this.height = this.target.clientHeight;
         if ( !json ) json = this.data;
-        let data = json.slice( this.zoom * -7 );
+        let data = this.zoomdata = json.slice( this.zoom * -7 );
+        if ( data.length < 2 ) return this.zoom = 0;
         this.wickpadding = this.width > 1500 ? 4 : this.width > 1000 ? 2 : 1;
         //let maxwidth = this.width / ( data.length - 1 ) - this.wickpadding;
         let wickwidth = 0.6, halfwick = wickwidth / 2;
@@ -255,16 +297,19 @@ class Chartaholic {
         this.max_y = Math.max( ...data.map( d => d.h ) );
         this.min_time = Math.min( ...data.map( d => d.time ) );
         this.max_time = Math.max( ...data.map( d => d.time ) );
-        this.ticks_x = this.calculateTicks( this.min_time, this.max_time, 7 );
+        this.ticks_x = this.timeRange( this.min_time, this.max_time, 7 );
         this.ticks_y = this.calculateTicks( this.min_y, this.max_y, 10 );
+        console.log( this.ticks_x );
         //this.min_y = this.ticks_y[0];
         //this.max_y = this.ticks_y[this.ticks_y.length - 1];
-        this.delta_y = this.max_y - this.min_y;
-        this.delta_x = this.max_x - this.min_x;
-        this.delta_time = this.max_time - this.min_time;
+        this.range_y = this.max_y - this.min_y;
+        this.range_x = this.max_x - this.min_x;
+        this.time_delta = data[1].time - data[0].time;
+        console.log( `time delta: ` + this.time_delta );
+        this.time_range = this.max_time - this.min_time;
         //this.mid_x = ( this.min_x + this.min_y ) / 2;
         //this.mid_y = ( this.max_y + this.min_y ) / 2;
-        //console.log( `delta: ${this.delta_x}, ${this.delta_y}` );
+        //console.log( `delta: ${this.range_x}, ${this.range_y}` );
         //console.info( `min_x: ${this.min_x}, min_y: ${this.min_y}, max_x: ${this.max_x}, max_y: ${this.max_y}` );
         //let x_ticks = scaleTicks(TICK_COUNT, MAX_X, MIN_X);
         //let y_ticks = [MAX_Y, (MAX_Y + MIN_Y) / 2, MIN_Y];
@@ -279,17 +324,18 @@ class Chartaholic {
         svg.setAttributeNS( null, 'width', this.width );
         svg.setAttributeNS( null, 'height', this.height );
         svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
-        const tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content', last_close = this.last_tick.c;
+        const tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
         this.draw_grid();
-        let size = ( this.width / data.length ) - 5;
-        if ( size < 5 ) size = 5;
-        if ( size > 20 ) size = 20;
         for ( let tick of data ) {
-            if ( this.structure ) this.custom_structure();
+            if ( this.structure ) this.custom_structure( tick );
             color = tick.c >= tick.o ? 'up' : 'down';
             let candle = document.createElementNS( this.namespace, 'path' );
             candle.setAttributeNS( null, 'class', `${color} tip` );
-            candle.setAttributeNS( null, 'd', `M${this.dx( tick.x + halfwick )},${this.dy( tick.h )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z` );
+            let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
+            let wick_top = `M${this.dx( tick.x + halfwick )},${this.dy( tick.h )}L${this.dx( tick.x + halfwick )},${this.dy( wick_highest )}`;
+            let wick_bot = `M${this.dx( tick.x + halfwick )},${this.dy( wick_lowest )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}`;
+            let candle_body = `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z`;
+            candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
             candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}` );
             svg.appendChild( candle );
         }
@@ -299,47 +345,49 @@ class Chartaholic {
         element.setAttributeNS( null, 'd', `M${marginx},0L${marginx},${this.height}` );
         svg.appendChild( element );*/
         //color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
+        //if ( this.watermark ) svg.appendChild( this.watermark );
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
         //<text id='mousex' alignment-baseline='hanging' x='0' y='0'></text>
         //<text id='mousey' alignment-baseline='baseline' x='0' y='${HEIGHT}'></text>
-        //this.target.onresize = this.resize.bind( this );
         this.target.innerHTML = "";
         this.target.appendChild( svg );
         if ( typeof tippy !== "undefined" ) tippy( ".tip", { theme: "light", arrow: true, a11y: false } );
         /////////////////////////////////////////////////
     }
 
-    getTicks( count, max ) {
-        return [...Array( count ).keys()].map( d => max / ( count - 1 ) * parseInt( d ) )
-    }
     scaleTicks( count, max, min ) {
         return [...Array( count ).keys()].map( d => max / ( count - 1 ) * parseInt( d ) )
-        //return [...Array(count).keys()].map(d => (max - min) / (count - 1) * parseInt(d))
     }
     nz( value, def = 0 ) {
         return isFinite( value ) ? value : def;
     }
+    // Display sats values instead of small fractions
     sats( number ) {
         if ( number <= 0.0001 ) return Math.round( number * 1e8 ).toString();// + " sats";
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: 1, maximumFractionDigits: 8 } ).format( number );
     }
-    usd( number, maxdigits = 2, mindigits = 0 ) {
-        let result = Intl.NumberFormat( 'en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: mindigits, maximumFractionDigits: maxdigits } ).format( number );
-        if ( mindigits == 0 ) return result.replace( /\.00$/, '' );
+    // Format display for USD currency
+    usd( number, maxPrecision = 2, minPrecision = 0 ) {
+        if ( maxPrecision < 1 ) maxPrecision = 8;
+        let result = Intl.NumberFormat( 'en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
+        if ( minPrecision == 0 ) return result.replace( /\.00$/, '' );
         return result;
     }
+    // Format decimal precision
     format( number, maxPrecision = 8, minPrecision = 0 ) {
+        if ( maxPrecision < 1 ) maxPrecision = 8;
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
     }
-    autoformat( number, minDigits = 0 ) {
+    // Automatically determine formatting
+    autoformat( number, maxPrecision = 8, minPrecision = 0 ) {
         //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
-        if ( number <= 0.0001 ) return this.sats( number );//this.format( number, 8, 2 )
-        if ( number >= 1000 ) return this.usd( number, 2, minDigits );
-        if ( number >= 100 ) return this.usd( number, 4, minDigits );
-        if ( number >= 10 ) return this.usd( number, 4, minDigits );
-        if ( number < 10 ) return this.format( number, 8, minDigits )
-        return this.format( number );
+        if ( number < 0.0001 && this.use_sats ) return this.sats( number );//this.format( number, 8, 2 )
+        if ( number >= 1000 ) return this.usd( number, maxPrecision < 2 ? 2 : maxPrecision, minPrecision );
+        if ( number >= 100 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
+        if ( number >= 10 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
+        if ( number < 10 ) return this.format( number, maxPrecision, minPrecision )
+        return this.format( number, maxPrecision, minPrecision );
     }
 
     constructor( target, options = {} ) {
@@ -349,19 +397,19 @@ class Chartaholic {
         this.theme = typeof options.theme == "undefined" ? "standard" : options.theme;
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
-        //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
+        this.indicators = typeof options.indicators == "undefined" ? [] : options.indicators;
         this.structure = typeof options.structure == "undefined" ? false : options.structure;
         this.smoothing = typeof options.smoothing == "undefined" ? false : options.smoothing;
         this.gridlines = typeof options.gridlines == "undefined" ? true : options.gridlines;
-        this.margin_right = 100;
-        this.margin_bottom = 13;
+        //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
+        this.margin_right = typeof options.margin_right == "undefined" ? 100 : options.margin_right;
+        this.margin_bottom = typeof options.margin_bottom == "undefined" ? 13 : options.margin_bottom;
+        this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
+        //this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
         window.addEventListener( 'resize', this.resize.bind( this ) );
         this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
-        if ( typeof options.ticks !== "undefined" ) {
-            this.import( options.ticks );
-            this.render();
-        }
+        if ( typeof options.ticks !== "undefined" ) this.import( options.ticks, true );
     }
 }
 if ( typeof module !== 'undefined' && module.exports ) module.exports = Chartaholic;
