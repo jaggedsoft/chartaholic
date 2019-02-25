@@ -6,13 +6,18 @@
 }
 
 body {
-    background: #1c1e23;
     color: #fff;
     margin: 0;
     padding: 0;
     font-family: sans-serif;
     font-size: 14px;
     overflow-x: hidden
+}
+.dark {
+    background: #1c1e23;
+}
+.light {
+    background:#fff
 }
 
 svg {
@@ -41,8 +46,6 @@ polyline {
 .label text {
     font-size: 11px;
     font-weight: normal;
-    color: #FFFFFF;
-    fill: #FFFFFF
 }
 
 #mousex,
@@ -54,10 +57,19 @@ polyline {
 }
 
 text {
-    fill: #fff;
     /*tv blue #2196f3 grey #6c757d;*/
     font: bold 16px sans-serif;
+}
+.dark text {
+    fill: #fff;
     text-shadow: 1px 1px #000;
+}
+.light text {
+    fill: #333;
+    text-shadow: none /*1px 1px #000;*/
+}
+.light .lastprice {
+    fill:#fff
 }
 
 .headline {
@@ -74,12 +86,20 @@ text {
     fill:#4db872
 }
 
-.grid {
+.light .grid {
+    stroke: #e0e0e0;
+}
+.dark .grid {
     stroke: #242931
 }
 
-.xaxis, .axis {
+.dark .xaxis, .dark .axis {
     fill: #505674;
+}
+.light xaxis, .light .axis {
+    fill: #333
+}
+.xaxis, .axis {
     stroke: none;
     font: 13px sans-serif;
 }
@@ -90,6 +110,19 @@ text {
     stroke-width: 1px;
     stroke: #6c757d;
     fill: #6c757d
+}
+
+path.regression {
+    stroke-width:2px;
+    stroke:#fff;
+    stroke-dasharray:2px;
+    shape-rendering: auto /*geometricPrecision*/
+}
+
+path.lines {
+    stroke-width:1px;
+    stroke:#FF5722;
+    shape-rendering: auto
 }
 
 path.structure {
@@ -128,12 +161,12 @@ text.red {
 }
 
 .light .up {
-    stroke: #fff;
-    fill: #fff
+    stroke: #399F6E;
+    fill: #399F6E
 }
 .light .down {
-    fill: #000;
-    stroke: #000
+    fill: #FE4747;
+    stroke: #FE4747
 }
 
 .hollow .up {
