@@ -170,14 +170,108 @@ class Chartaholic {
         element.setAttributeNS( null, "alignment-baseline", alignment );
         element.setAttributeNS( null, "x", x );
         element.setAttributeNS( null, "y", y );
-        element.innerHTML = string;
+        element.textContent = string;
         return element;
+    }
+
+    regress( x, y ) {
+        if ( x === false ) {
+            let blank = [];
+            for ( let i = 0; i < y.length; i++ ) {
+                blank.push( i );
+            }
+            x = blank;
+        }
+        const n = y.length;
+        let sx = 0;
+        let sy = 0;
+        let sxy = 0;
+        let sxx = 0;
+        let syy = 0;
+        for ( let i = 0; i < n; i++ ) {
+            sx += x[i];
+            sy += y[i];
+            sxy += x[i] * y[i];
+            sxx += x[i] * x[i];
+            syy += y[i] * y[i];
+        }
+        const mx = sx / n;
+        const my = sy / n;
+        const yy = n * syy - sy * sy;
+        const xx = n * sxx - sx * sx;
+        const xy = n * sxy - sx * sy;
+        const slope = xy / xx;
+        const intercept = my - slope * mx;
+        const r = xy / Math.sqrt( xx * yy );
+        const r2 = Math.pow( r, 2 );
+        //let sst = 0;
+        //for (let i = 0; i < n; i++) {
+        //   sst += Math.pow((y[i] - my), 2);
+        //}
+        //const sse = sst - r2 * sst;
+        //const see = Math.sqrt(sse / (n - 2));
+        //const ssr = sst - sse;
+        //sse, ssr, sst, sy, sx, see
+        var s2x, s2y, s2, s, xbar = sx / n;
+        s2x = ( n * sxx - sx * sx ) / n / ( n - 1 );
+        s2y = ( n * syy - sy * sy ) / n / ( n - 1 );
+        s2 = ( n - 1 ) / ( n - 2 ) * ( s2y - slope * slope * s2x );
+        s2 = Math.abs( s2 );
+        s = Math.sqrt( s2 );
+        let t95 = [0, 6.314, 2.920, 2.353, 2.132, 2.015, 1.943, 1.895, 1.860, 1.833, 1.812];
+        let xpred = 0;
+        let ymean = slope * xpred + intercept;
+        //let ylower = ymean - s*Math.sqrt(1 + 1/n + (xpred-xbar)*(xpred-xbar)/(n-1)/s2x);
+        let ylower = ymean - t95[n - 2] * s * Math.sqrt( 1 + 1 / n + ( xpred - xbar ) * ( xpred - xbar ) / ( n - 1 ) / s2x );
+        let yupper = 2 * ymean - ylower;
+        xpred = n - 1;
+        let ymean2 = slope * xpred + intercept;
+        //let ylower2 = ymean2 - s*Math.sqrt(1 + 1/n + (xpred-xbar)*(xpred-xbar)/(n-1)/s2x);
+        let ylower2 = ymean2 - t95[n - 2] * s * Math.sqrt( 1 + 1 / n + ( xpred - xbar ) * ( xpred - xbar ) / ( n - 1 ) / s2x );
+        let yupper2 = 2 * ymean2 - ylower2;
+        let yupper3 = yupper, yupper4 = yupper2;
+        let ylower3 = ylower, ylower4 = ylower2;
+        yupper = ( ymean + yupper ) * 0.5;
+        ylower = ( ymean + ylower ) * 0.5;
+        yupper2 = ( ymean2 + yupper2 ) * 0.5;
+        ylower2 = ( ymean2 + ylower2 ) * 0.5;
+        let gain = ymean2 / ymean;
+        //let ylower = ymean - t95[n-2]*s*sqrt(1 + 1/n + (xpred-xbar)*(xpred-xbar)/(n-1)/s2x);
+        //let delta = ymean2 - ymean;
+        return { slope, intercept, r, r2, yupper, ymean, ylower, yupper2, ymean2, ylower2, yupper3, ylower3, yupper4, ylower4, gain };
+    }
+
+    draw_lines( lines, styles = {}, className = 'lines' ) {
+        for ( let line of lines ) {
+            let element = document.createElementNS( this.namespace, 'path' ), path = '';
+            element.setAttributeNS( null, 'class', className );
+            for ( let i = 0; i < line.length; i += 2 ) {
+                let x = line[i], y = line[i + 1];
+                path += `${i > 0 ? 'L' : 'M'}${this.nz( this.dx( x ) )},${this.nz( this.dy( y ) )}`;
+            }
+            element.setAttributeNS( null, 'd', path );
+            this.svg.appendChild( element );
+        }
+    }
+
+    draw_regression( length = this.regression ) {
+        if ( length == true ) length = 10;
+        let linreg = this.regress( false, this.closes.slice( -length ) );
+        let xstart = this.count - length, xend = this.count;
+        let lines = [
+            [xstart, linreg.yupper3, xend, linreg.yupper4],
+            //[xstart, linreg.yupper, xend, linreg.yupper2],
+            //[xstart, linreg.ylower, xend, linreg.ylower2],
+            [xstart, linreg.ylower3, xend, linreg.ylower4]
+        ];
+        this.draw_lines( lines, {}, 'regression' );
+        //let bullish = ( linreg.gain >= 0.88 ) ? true : false;
     }
 
     custom_structure( tick ) {
         const today = moment(), alignment = 'middle', svg = this.svg;
         //daily open 'day'
-        const week_open = today.startOf( 'week' ), week_cal = week_open.calendar();
+        const week_open = today.startOf( 'week' );
         const month_open = today.startOf( 'month' ), month_cal = month_open.calendar();
         const quarter_open = today.startOf( 'quarter' ), quarter_cal = quarter_open.calendar();
         const year_open = today.startOf( 'year' ), year_cal = year_open.calendar();
@@ -230,7 +324,7 @@ class Chartaholic {
             svg.appendChild( textelement );
         }
         // Weekly Open
-        if ( week_cal == cal && typeof this.drawn.week_open == 'undefined' ) {
+        /*if ( week_open.isSame( d, 'day' ) && typeof this.drawn.week_open == 'undefined' ) {
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
             element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
@@ -240,7 +334,7 @@ class Chartaholic {
             let textelement = this.text( this.width, this.dy( tick.o ) + 1, 'Weekly Open', 'structure ' + color, 'end', alignment, size );
             textelement.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             this.svg.appendChild( textelement );
-        }
+        }*/
     }
 
     draw_grid() {
@@ -263,16 +357,28 @@ class Chartaholic {
             if ( this.gridlines ) this.svg.appendChild( element );
             this.svg.appendChild( this.text( dx, this.height - 2, moment( x ).format( 'MMM D' ), 'xaxis', 'middle', 'start' ) );
         }
-        let tick_distance = ( this.ticks_y[1] - this.ticks_y[0] ) / 3;
+        //let tick_distance = ( this.ticks_y[1] - this.ticks_y[0] ) / 3;
         for ( let y of this.ticks_y ) {
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'grid' );
             element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
             if ( this.gridlines ) this.svg.appendChild( element );
-            if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
+            //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
             this.svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
         }
-        this.svg.appendChild( this.text( this.width, this.dy( last_close ), close_display, 'lastprice', 'end', 'middle' ) );
+        let display_y = this.dy( last_close );
+        let element = this.text( this.width, display_y < 10 ? 10 : display_y, close_display, 'lastprice', 'end', 'middle' );
+        this.svg.appendChild( element );
+        //console.log( element.getComputedTextLength() );
+        //let bbox = element.getBBox()
+        let rect = document.createElementNS( this.namespace, "rect" );
+        rect.setAttributeNS( null, "x", this.margin_x + 4 );
+        rect.setAttributeNS( null, "y", display_y - 11.5 );
+        rect.setAttributeNS( null, "width", this.margin_x );
+        rect.setAttributeNS( null, "height", 20 );
+        rect.setAttributeNS( null, "fill", "#1c1e23" );
+        //rect.setAttributeNS( null, "class", "up" );
+        this.svg.insertBefore( rect, element );
     }
 
     render( json = false ) {
@@ -320,7 +426,7 @@ class Chartaholic {
         //svg.style.strokeWidth = "1px";
         svg.style.width = `${this.width}px`;
         svg.style.height = `${this.height}px`;
-        svg.setAttributeNS( null, 'class', this.theme );
+        svg.setAttributeNS( null, 'class', `${this.theme} ${this.style}` );
         svg.setAttributeNS( null, 'width', this.width );
         svg.setAttributeNS( null, 'height', this.height );
         svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
@@ -336,7 +442,7 @@ class Chartaholic {
             let wick_bot = `M${this.dx( tick.x + halfwick )},${this.dy( wick_lowest )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}`;
             let candle_body = `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z`;
             candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
-            candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}` );
+            candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}<br/><b>Volume:</b> ${tick.v}` );
             svg.appendChild( candle );
         }
         /////////////////////////////////////////////////
@@ -346,6 +452,8 @@ class Chartaholic {
         svg.appendChild( element );*/
         //color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
         //if ( this.watermark ) svg.appendChild( this.watermark );
+        if ( this.lines ) this.draw_lines( this.lines );
+        if ( this.regression ) this.draw_regression();
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
         //<text id='mousex' alignment-baseline='hanging' x='0' y='0'></text>
@@ -395,15 +503,20 @@ class Chartaholic {
         this.zoom = 0; //31
         this.target = typeof target == "string" ? document.querySelector( target ) : target;
         this.theme = typeof options.theme == "undefined" ? "standard" : options.theme;
+        this.style = this.theme == "light" ? "light" : "dark";
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
+        //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
         this.indicators = typeof options.indicators == "undefined" ? [] : options.indicators;
+        this.regression = typeof options.regression == "undefined" ? false : options.regression;
         this.structure = typeof options.structure == "undefined" ? false : options.structure;
         this.smoothing = typeof options.smoothing == "undefined" ? false : options.smoothing;
         this.gridlines = typeof options.gridlines == "undefined" ? true : options.gridlines;
         //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
         this.margin_right = typeof options.margin_right == "undefined" ? 100 : options.margin_right;
         this.margin_bottom = typeof options.margin_bottom == "undefined" ? 13 : options.margin_bottom;
+        //this.styles = typeof options.styles == "undefined" ? {lines:{}} : options.styles;
+        this.lines = typeof options.lines == "undefined" ? [] : options.lines;
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
         //this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
