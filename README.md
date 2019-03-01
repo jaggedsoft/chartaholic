@@ -1,6 +1,11 @@
 # Chartaholic
 Lightning fast ⚡ Responsive SVG candlestick chart generation in Javascript
 
+#### Examples
+[![IDEX: LTO]](https://cdn.discordapp.com/attachments/353337937892474902/551061827098902529/chartaholic.png)
+[![BitMax: BTC]](https://cdn.discordapp.com/attachments/353337937892474902/551062009572229130/chartaholic.png)
+> This project is a work in progress, being improved all the time. Target launch date is end of 2019.
+
 #### Getting Started
 ```js
 let chart = new Chartaholic("#chart", { ticks: ohlc });
