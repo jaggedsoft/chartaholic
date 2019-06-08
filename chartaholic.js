@@ -371,9 +371,10 @@ class Chartaholic {
         this.svg.appendChild( element );
         //console.log( element.getComputedTextLength() );
         //let bbox = element.getBBox()
-        let rect = document.createElementNS( this.namespace, "rect" );
+        let rect = document.createElementNS( this.namespace, "rect" ), rect_height = 11.5, rect_padding = Math.ceil( rect_height / 3 );
+        if ( display_y < rect_height - rect_padding ) display_y = rect_height - rect_padding;
         rect.setAttributeNS( null, "x", this.margin_x + 4 );
-        rect.setAttributeNS( null, "y", display_y - 11.5 );
+        rect.setAttributeNS( null, "y", display_y - rect_height );
         rect.setAttributeNS( null, "width", this.margin_x );
         rect.setAttributeNS( null, "height", 20 );
         rect.setAttributeNS( null, "fill", "#1c1e23" );
