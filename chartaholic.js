@@ -371,7 +371,8 @@ class Chartaholic {
         this.svg.appendChild( element );
         //console.log( element.getComputedTextLength() );
         //let bbox = element.getBBox()
-        let rect = document.createElementNS( this.namespace, "rect" ), rect_height = 11.5, rect_padding = Math.ceil( rect_height / 3 );
+        let rect = document.createElementNS( this.namespace, "rect" );
+        let rect_height = 11.5, rect_padding = Math.ceil( rect_height / 3 );
         if ( display_y < rect_height - rect_padding ) display_y = rect_height - rect_padding;
         rect.setAttributeNS( null, "x", this.margin_x + 4 );
         rect.setAttributeNS( null, "y", display_y - rect_height );
@@ -389,6 +390,8 @@ class Chartaholic {
         let data = this.zoomdata = json.slice( this.zoom * -7 );
         if ( data.length < 2 ) return this.zoom = 0;
         this.wickpadding = this.width > 1500 ? 4 : this.width > 1000 ? 2 : 1;
+        let maxticks_x = this.width > 1500 ? 14 : 7;
+        let maxticks_y = this.height > 190 ? 10 : 5;
         //let maxwidth = this.width / ( data.length - 1 ) - this.wickpadding;
         let wickwidth = 0.6, halfwick = wickwidth / 2;
         if ( this.smoothing ) { // heikin ashi, etc
@@ -404,8 +407,8 @@ class Chartaholic {
         this.max_y = Math.max( ...data.map( d => d.h ) );
         this.min_time = Math.min( ...data.map( d => d.time ) );
         this.max_time = Math.max( ...data.map( d => d.time ) );
-        this.ticks_x = this.timeRange( this.min_time, this.max_time, 7 );
-        this.ticks_y = this.calculateTicks( this.min_y, this.max_y, 10 );
+        this.ticks_x = this.timeRange( this.min_time, this.max_time, maxticks_x );
+        this.ticks_y = this.calculateTicks( this.min_y, this.max_y, maxticks_y );
         console.log( this.ticks_x );
         //this.min_y = this.ticks_y[0];
         //this.max_y = this.ticks_y[this.ticks_y.length - 1];
@@ -504,7 +507,7 @@ class Chartaholic {
         this.zoom = 0; //31
         this.target = typeof target == "string" ? document.querySelector( target ) : target;
         this.theme = typeof options.theme == "undefined" ? "standard" : options.theme;
-        this.style = this.theme == "light" ? "light" : "dark";
+        this.style = this.theme == "light" || this.theme == "contrast" ? "light" : "dark";
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
