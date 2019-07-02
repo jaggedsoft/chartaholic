@@ -81,6 +81,7 @@ class Chartaholic {
         }
         const delta = Math.sign( event.deltaY );
         this.zoom += delta;
+        //console.info( "zoom: " + this.zoom );
         this.render();
     }
 
@@ -399,6 +400,7 @@ class Chartaholic {
             data = this.ha( data );
             console.info( data );*/
         }
+        //console.table( data );
         this.drawn = {};
         this.last_tick = data.slice( -1 )[0];
         this.min_x = Math.min( ...data.map( d => d.x ) );
@@ -410,6 +412,7 @@ class Chartaholic {
         this.ticks_x = this.timeRange( this.min_time, this.max_time, maxticks_x );
         this.ticks_y = this.calculateTicks( this.min_y, this.max_y, maxticks_y );
         console.log( this.ticks_x );
+        //console.log( this.ticks_y );
         //this.min_y = this.ticks_y[0];
         //this.max_y = this.ticks_y[this.ticks_y.length - 1];
         this.range_y = this.max_y - this.min_y;
@@ -504,7 +507,6 @@ class Chartaholic {
 
     constructor( target, options = {} ) {
         this.namespace = "http://www.w3.org/2000/svg";
-        this.zoom = 0; //31
         this.target = typeof target == "string" ? document.querySelector( target ) : target;
         this.theme = typeof options.theme == "undefined" ? "standard" : options.theme;
         this.style = this.theme == "light" || this.theme == "contrast" ? "light" : "dark";
@@ -527,6 +529,8 @@ class Chartaholic {
         window.addEventListener( 'resize', this.resize.bind( this ) );
         this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
         if ( typeof options.ticks !== "undefined" ) this.import( options.ticks, true );
+        this.zoom = typeof options.zoom == "undefined" ? 0 : options.zoom;
+        if ( this.zoom !== 0 ) this.render();
     }
 }
 if ( typeof module !== 'undefined' && module.exports ) module.exports = Chartaholic;
