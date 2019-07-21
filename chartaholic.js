@@ -458,7 +458,17 @@ class Chartaholic {
         element.setAttributeNS( null, 'd', `M${marginx},0L${marginx},${this.height}` );
         svg.appendChild( element );*/
         //color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
-        //if ( this.watermark ) svg.appendChild( this.watermark );
+        if ( this.watermark ) {
+            console.info( "loading watermark: " + this.watermark );
+            let logo = document.createElementNS( this.namespace, 'image' );
+            logo.setAttribute( 'width', '170' );
+            logo.setAttribute( 'height', '28' );
+            logo.setAttribute( 'x', 0 );
+            logo.setAttribute( 'y', this.height - 28 );
+            logo.setAttributeNS( 'http://www.w3.org/1999/xlink', 'href', this.watermark );
+            logo.setAttribute( 'onclick', 'location.href = "https://chartaholic.com";' );
+            svg.appendChild( logo );
+        }
         if ( this.lines ) this.draw_lines( this.lines );
         if ( this.regression ) this.draw_regression();
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
@@ -524,7 +534,7 @@ class Chartaholic {
         //this.styles = typeof options.styles == "undefined" ? {lines:{}} : options.styles;
         this.lines = typeof options.lines == "undefined" ? [] : options.lines;
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
-        //this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
+        this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
         window.addEventListener( 'resize', this.resize.bind( this ) );
         this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
