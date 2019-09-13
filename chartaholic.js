@@ -449,7 +449,7 @@ class Chartaholic {
             let wick_bot = `M${this.dx( tick.x + halfwick )},${this.dy( wick_lowest )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}`;
             let candle_body = `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z`;
             candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
-            candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}<br/><b>Volume:</b> ${tick.v}` );
+            candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}<br/>${tick.v > 0 ? `<b>Volume:</b> ${Math.round( tick.v ).toLocaleString()}` : ''}` );
             svg.appendChild( candle );
         }
         /////////////////////////////////////////////////
