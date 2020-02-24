@@ -216,16 +216,16 @@ path {
     /* pointer-events:none;
     user-select:none */
 }
-.hlines .thin {
-    stroke-width: 1px !important;
-}
-.hlines .thick {
-    stroke-width: 3px !important;
-}
 path.hlines {
-    stroke-width: 2px;
+    stroke-width: 1px;
     stroke: #505675;
     opacity: 0.5
+}
+path.hlines .thin {
+    stroke-width: 1px !important;
+}
+path.hlines .thick {
+    stroke-width: 3px !important;
 }
 
 path.green {
@@ -246,7 +246,9 @@ text.green {
 text.red {
     fill:#f44336
 }
-
+text.thin {
+    font-size:7px !important
+}
 .vol {
     opacity:.33
 }
