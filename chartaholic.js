@@ -168,7 +168,7 @@ class Chartaholic {
         if ( size ) element.style.fontSize = `${size}px`;
         element.setAttributeNS( null, "class", className );
         element.setAttributeNS( null, "text-anchor", anchor );
-        element.setAttributeNS( null, "alignment-baseline", alignment );
+        element.setAttributeNS( null, "dominant-baseline", alignment );
         element.setAttributeNS( null, "x", x );
         element.setAttributeNS( null, "y", y );
         element.textContent = string;
@@ -252,6 +252,19 @@ class Chartaholic {
             }
             element.setAttributeNS( null, 'd', path );
             this.svg.appendChild( element );
+        }
+    }
+
+    draw_hlines( hlines, styles = {}, className = 'hlines' ) {
+        for ( let line of hlines ) {
+            let [price, annotation, color] = line;
+            let element = document.createElementNS( this.namespace, 'path' ), path = '';
+            element.setAttributeNS( null, 'class', `${className} ${color}800` );
+            const dy = this.nz( this.dy( price ) );
+            path = `M${this.dx( 0 )},${dy}L${this.dx( this.width )},${dy}`;
+            element.setAttributeNS( null, 'd', path );
+            this.svg.appendChild( element );
+            if ( annotation ) this.svg.appendChild( this.text( this.width / 2, dy, `${annotation} @ ${price}`, color, "start", "middle" ) );
         }
     }
 
@@ -344,7 +357,7 @@ class Chartaholic {
         if ( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ) == this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) y_axis_precision++;
         let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision );
         // Remove y axis beneath last price
-        let closest = this.get_closest( this.ticks_y, last_close );
+        //let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 8 ) this.margin_right = 75;
         if ( close_display.length < 6 ) this.margin_right = 50;
         this.margin_x = this.width - this.margin_right;
@@ -366,6 +379,21 @@ class Chartaholic {
             if ( this.gridlines ) this.svg.appendChild( element );
             //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
             this.svg.appendChild( this.text( this.width, this.dy( y ), this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' ), 'axis', 'end', 'middle' ) );
+        }
+        for ( let tick of this.zoomdata ) {
+            if ( this.show_volume && tick.v ) {
+                let size = ( this.width / this.zoomdata.length ) - 3.5;
+                //if ( this.zoomdata.length < 20 ) size = size * 2;
+                if ( this.zoomdata.length < 10 ) size = size * 2;
+                let rect = document.createElementNS( this.namespace, "rect" );
+                let rect_height = 40 * ( tick.v / this.max_vol );
+                rect.setAttributeNS( null, "x", this.dx( tick.x ) - 1 );
+                rect.setAttributeNS( null, "y", this.height - ( rect_height + 20 ) );//this.dy( this.height ) - ( this.margin_y + 4 ) );
+                rect.setAttributeNS( null, "width", size );
+                rect.setAttributeNS( null, "height", rect_height );
+                rect.setAttributeNS( null, "class", `${tick.c >= tick.o ? 'up' : 'down'} vol` );
+                this.svg.appendChild( rect );
+            }
         }
         let display_y = this.dy( last_close );
         let element = this.text( this.width, display_y < 10 ? 10 : display_y, close_display, 'lastprice', 'end', 'middle' );
@@ -407,18 +435,16 @@ class Chartaholic {
         this.max_x = Math.max( ...data.map( d => d.x ) ) + 0.5;
         this.min_y = Math.min( ...data.map( d => d.l ) );
         this.max_y = Math.max( ...data.map( d => d.h ) );
+        this.max_vol = Math.max( ...data.map( d => d.v ) );
         this.min_time = Math.min( ...data.map( d => d.time ) );
         this.max_time = Math.max( ...data.map( d => d.time ) );
         this.ticks_x = this.timeRange( this.min_time, this.max_time, maxticks_x );
         this.ticks_y = this.calculateTicks( this.min_y, this.max_y, maxticks_y );
-        console.log( this.ticks_x );
-        //console.log( this.ticks_y );
-        //this.min_y = this.ticks_y[0];
-        //this.max_y = this.ticks_y[this.ticks_y.length - 1];
+        //ticks_x / 1e3 difference tells you the timeframe. 1d = 86400
         this.range_y = this.max_y - this.min_y;
         this.range_x = this.max_x - this.min_x;
         this.time_delta = data[1].time - data[0].time;
-        console.log( `time delta: ` + this.time_delta );
+        //console.log( `time delta: ` + this.time_delta );
         this.time_range = this.max_time - this.min_time;
         //this.mid_x = ( this.min_x + this.min_y ) / 2;
         //this.mid_y = ( this.max_y + this.min_y ) / 2;
@@ -440,8 +466,8 @@ class Chartaholic {
         const tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
         this.draw_grid();
         for ( let tick of data ) {
-            if ( this.structure ) this.custom_structure( tick );
             color = tick.c >= tick.o ? 'up' : 'down';
+            if ( this.structure ) this.custom_structure( tick );
             let candle = document.createElementNS( this.namespace, 'path' );
             candle.setAttributeNS( null, 'class', `${color} tip` );
             let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
@@ -453,11 +479,6 @@ class Chartaholic {
             svg.appendChild( candle );
         }
         /////////////////////////////////////////////////
-        /*let element = document.createElementNS( this.namespace, 'path' );
-        element.setAttributeNS( null, 'class', 'black' );
-        element.setAttributeNS( null, 'd', `M${marginx},0L${marginx},${this.height}` );
-        svg.appendChild( element );*/
-        //color = this.last_tick.c >= this.last_tick.o ? 'up' : 'down'
         if ( this.watermark ) {
             console.info( "loading watermark: " + this.watermark );
             let logo = document.createElementNS( this.namespace, 'image' );
@@ -469,12 +490,13 @@ class Chartaholic {
             logo.setAttribute( 'onclick', 'location.href = "https://chartaholic.com";' );
             svg.appendChild( logo );
         }
+        if ( this.hlines ) this.draw_hlines( this.hlines );
         if ( this.lines ) this.draw_lines( this.lines );
         if ( this.regression ) this.draw_regression();
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
-        //<text id='mousex' alignment-baseline='hanging' x='0' y='0'></text>
-        //<text id='mousey' alignment-baseline='baseline' x='0' y='${HEIGHT}'></text>
+        //<text id='mousex' dominant-baseline='hanging' x='0' y='0'></text>
+        //<text id='mousey' dominant-baseline='baseline' x='0' y='${HEIGHT}'></text>
         this.target.innerHTML = "";
         this.target.appendChild( svg );
         if ( typeof tippy !== "undefined" ) tippy( ".tip", { theme: "light", arrow: true, a11y: false } );
@@ -530,9 +552,11 @@ class Chartaholic {
         this.gridlines = typeof options.gridlines == "undefined" ? true : options.gridlines;
         //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
         this.margin_right = typeof options.margin_right == "undefined" ? 100 : options.margin_right;
-        this.margin_bottom = typeof options.margin_bottom == "undefined" ? 13 : options.margin_bottom;
+        this.show_volume = typeof options.show_volume == "undefined" ? false : options.show_volume;
+        this.margin_bottom = typeof options.margin_bottom == "undefined" ? this.show_volume ? 30 : 13 : options.margin_bottom; //13
         //this.styles = typeof options.styles == "undefined" ? {lines:{}} : options.styles;
         this.lines = typeof options.lines == "undefined" ? [] : options.lines;
+        this.hlines = typeof options.hlines == "undefined" ? [] : options.hlines;
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
         this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
