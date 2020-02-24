@@ -264,7 +264,7 @@ class Chartaholic {
             path = `M${this.dx( 0 )},${dy}L${this.dx( this.width )},${dy}`;
             element.setAttributeNS( null, 'd', path );
             this.svg.appendChild( element );
-            if ( annotation ) this.svg.appendChild( this.text( this.width / 2, dy, `${annotation} @ ${price}`, color, "start", "middle" ) );
+            if ( annotation ) this.svg.appendChild( this.text( 1, dy, annotation, color, "start", "middle", "7px" ) );
         }
     }
 
@@ -465,6 +465,7 @@ class Chartaholic {
         svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
         const tooltip_class = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
         this.draw_grid();
+        if ( this.hlines ) this.draw_hlines( this.hlines );
         for ( let tick of data ) {
             color = tick.c >= tick.o ? 'up' : 'down';
             if ( this.structure ) this.custom_structure( tick );
@@ -490,7 +491,6 @@ class Chartaholic {
             logo.setAttribute( 'onclick', 'location.href = "https://chartaholic.com";' );
             svg.appendChild( logo );
         }
-        if ( this.hlines ) this.draw_hlines( this.hlines );
         if ( this.lines ) this.draw_lines( this.lines );
         if ( this.regression ) this.draw_regression();
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
@@ -561,6 +561,7 @@ class Chartaholic {
         this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
         window.addEventListener( 'resize', this.resize.bind( this ) );
+        if ( !this.target ) throw `Invalid target: ${target}`;
         this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
         if ( typeof options.ticks !== "undefined" ) this.import( options.ticks, true );
         this.zoom = typeof options.zoom == "undefined" ? 0 : options.zoom;
