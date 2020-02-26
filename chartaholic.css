@@ -219,7 +219,7 @@ path {
 path.hlines {
     stroke-width: 1px;
     stroke: #505675;
-    opacity: 0.5
+    opacity: 0.75
 }
 path.hlines .thin {
     stroke-width: 1px !important;
@@ -234,11 +234,20 @@ path.green {
 path.red {
     stroke:#f44336;
 }
+path.red800 {
+    stroke:#c62828
+}
 path.green800 {
     stroke:#2E7D32
 }
-path.red800 {
-    stroke:#c62828
+path.purple {
+    stroke:#9C27B0
+}
+path.dpurple {
+    stroke:#6d1e7f
+}
+path.pink {
+    stroke:#E91E63
 }
 text.green {
     fill:#4CAF50
@@ -246,8 +255,17 @@ text.green {
 text.red {
     fill:#f44336
 }
+text.margin {
+    font:13px sans-serif
+}
 text.thin {
     font-size:7px !important
+}
+text.hover {
+    opacity:0.2
+}
+text.hover:hover {
+    opacity:1 !important
 }
 .vol {
     opacity:.33
