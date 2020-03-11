@@ -362,10 +362,12 @@ class Chartaholic {
         let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
         //console.info( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), y_axis_precision );
         // Remove y axis duplicates
-        while ( y_axis_precision < 8 && this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ) == this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) {
+        const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 );
+        while ( y_axis_precision < 8 && compare( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) ) {
             ++y_axis_precision;
         }
-        let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision );
+        let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision ), close_precision = this.getPrecision( close_display );
+        if ( y_axis_precision < close_precision ) y_axis_precision = close_precision;
         // Remove y axis beneath last price
         //let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 6 ) this.margin_right = 50;
@@ -389,8 +391,7 @@ class Chartaholic {
             element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
             if ( this.gridlines ) this.svg.appendChild( element );
             //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
-            let display = this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' )
-            //console.info( display );
+            let display = this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' );
             this.svg.appendChild( this.text( this.width, this.dy( y ), display, 'axis', 'end', 'middle' ) );
         }
         for ( let tick of this.zoomdata ) {
@@ -479,7 +480,7 @@ class Chartaholic {
         //svg.style.strokeWidth = "1px";
         svg.style.width = `${this.width}px`;
         svg.style.height = `${this.height}px`;
-        svg.setAttributeNS( null, 'class', `${this.theme} ${this.style}` );
+        svg.setAttributeNS( null, 'class', `Chart ${this.theme} ${this.style}` );
         svg.setAttributeNS( null, 'width', this.width );
         svg.setAttributeNS( null, 'height', this.height );
         svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
@@ -548,11 +549,11 @@ class Chartaholic {
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
     }
     // Automatically determine formatting
-    autoformat( number, maxPrecision = 8, minPrecision = 2 ) {
+    autoformat( number, maxPrecision = 8, minPrecision = 0 ) {
         //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
         if ( number <= 0.0001 && this.use_sats ) return this.sats( number, maxPrecision, minPrecision );//this.format( number, 8, 2 )
-        if ( number < 0.01 ) return this.format( number, maxPrecision, minPrecision < 3 ? 3 : minPrecision )
-        if ( number < 0.1 ) return this.format( number, maxPrecision, minPrecision < 2 ? 2 : minPrecision )
+        if ( number < 0.01 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 3 ? 3 : minPrecision
+        if ( number < 0.1 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 2 ? 2 : 
         if ( number >= 1000 ) return this.usd( number, maxPrecision < 2 ? 2 : maxPrecision, minPrecision );
         if ( number >= 100 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
         if ( number >= 10 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
@@ -568,6 +569,7 @@ class Chartaholic {
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
         this.showAll = typeof options.showAll == "undefined" ? true : options.showAll;
+        this.enableZoom = typeof options.enableZoom == "undefined" ? true : options.enableZoom;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
         this.indicators = typeof options.indicators == "undefined" ? [] : options.indicators;
         this.regression = typeof options.regression == "undefined" ? false : options.regression;
@@ -584,14 +586,13 @@ class Chartaholic {
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
         this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
-        window.addEventListener( 'resize', this.resize.bind( this ) );
         if ( !this.target ) throw `Invalid target: ${target}`;
-        this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
-        if ( typeof options.ticks !== "undefined" ) this.import( options.ticks, true );
+        window.addEventListener( 'resize', this.resize.bind( this ) );
+        if ( this.enableZoom ) this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
         this.zoom = typeof options.zoom == "undefined" ? 0 : options.zoom;
+        if ( typeof options.ticks !== "undefined" ) this.import( options.ticks, true );
         if ( this.zoom !== 0 ) this.render();
-        else this.resize.bind( this );
-        //setTimeout( () => { this.resize(); }, 1, this );
+        setTimeout( () => { this.render(); }, 50, this );
     }
 }
 if ( typeof module !== 'undefined' && module.exports ) module.exports = Chartaholic;
