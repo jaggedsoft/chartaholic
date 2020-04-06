@@ -73,6 +73,7 @@ class Chartaholic {
     }
 
     scroll( event ) {
+        if ( this.enableZoom == "shift" && !event.shiftKey ) return;
         if ( typeof tippy !== "undefined" ) {
             let elements = document.querySelectorAll( ".tippy-popper" );
             for ( let element of elements ) {
@@ -113,7 +114,7 @@ class Chartaholic {
     getPrecision( float ) {
         if ( !float || Number.isInteger( float ) ) return 0;
         let digits = float.toString().split( '.' )[1];
-        return typeof digits.length == "undefined" ? 0 : digits.length;
+        return !digits || typeof digits.length == "undefined" ? 0 : digits.length;
     }
 
     // Drawing functions: convert world space to screen space
@@ -165,7 +166,7 @@ class Chartaholic {
 
     text( x, y, string, className = "", anchor = "start", alignment = "hanging", size = false ) {
         let element = document.createElementNS( this.namespace, "text" );
-        if ( size ) element.style.fontSize = `${size}px`;
+        if ( size ) element.style.fontSize = `${ size }px`;
         element.setAttributeNS( null, "class", className );
         element.setAttributeNS( null, "text-anchor", anchor );
         element.setAttributeNS( null, "dominant-baseline", alignment );
@@ -248,7 +249,7 @@ class Chartaholic {
             element.setAttributeNS( null, 'class', className );
             for ( let i = 0; i < line.length; i += 2 ) {
                 let x = line[i], y = line[i + 1];
-                path += `${i > 0 ? 'L' : 'M'}${this.nz( this.dx( x ) )},${this.nz( this.dy( y ) )}`;
+                path += `${ i > 0 ? 'L' : 'M' }${ this.nz( this.dx( x ) ) },${ this.nz( this.dy( y ) ) }`;
             }
             element.setAttributeNS( null, 'd', path );
             this.svg.appendChild( element );
@@ -260,12 +261,12 @@ class Chartaholic {
         for ( let line of hlines ) {
             let [side, price, annotation, color] = line;
             let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', `tip ${className} ${color}` );
+            element.setAttributeNS( null, 'class', `tip ${ className } ${ color }` );
             let autofmt = this.autoformat( price, y_axis_precision, y_axis_precision );
             let dy = this.nz( this.dy( Number( price ) ) );
-            const tooltip = annotation ? `${side} ${annotation} @ ${autofmt}` : `${side} ${autofmt}`;
+            const tooltip = annotation ? `${ side } ${ annotation } @ ${ autofmt }` : `${ side } ${ autofmt }`;
             //const inner_width = this.width - ( this.margin_right * 0.275 );
-            element.setAttributeNS( null, 'd', `M${this.nz( this.dx( 0 ) )},${dy}L${this.nz( this.dx( this.width ) )},${dy}` );
+            element.setAttributeNS( null, 'd', `M${ this.nz( this.dx( 0 ) ) },${ dy }L${ this.nz( this.dx( this.width ) ) },${ dy }` );
             element.setAttributeNS( null, tooltip_class, tooltip );
             this.svg.appendChild( element );
             //annotation = `${autofmt} ${annotation}`;
@@ -276,7 +277,7 @@ class Chartaholic {
     }
 
     draw_regression( length = this.regression ) {
-        if ( length == true ) length = 10;
+        if ( length === true || length === "true" ) length = 10;
         let linreg = this.regress( false, this.closes.slice( -length ) );
         let xstart = this.count - length, xend = this.count;
         let lines = [
@@ -309,7 +310,7 @@ class Chartaholic {
         if ( year_cal == cal && typeof this.drawn.year_open == 'undefined' ) { // year_open.isSame( d, 'd' )
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
             element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.year_open = tick.o;
@@ -322,7 +323,7 @@ class Chartaholic {
         if ( quarter_cal == cal && typeof this.drawn.quarter_open == 'undefined' ) {
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
             element.setAttributeNS( null, tooltip_class, this.autoformat( tick.o ) );
             element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.quarter_open = tick.o;
@@ -336,7 +337,7 @@ class Chartaholic {
             console.log( "monthly open", last_close, tick.o, color );
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
+            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
             element.setAttributeNS( null, 'stroke-dasharray', '4' );
             this.drawn.month_open = tick.o;
             svg.appendChild( element );
@@ -363,11 +364,15 @@ class Chartaholic {
         //console.info( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), y_axis_precision );
         // Remove y axis duplicates
         const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 );
-        while ( y_axis_precision < 8 && compare( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) ) {
-            ++y_axis_precision;
+        if ( this.usd ) {
+            y_axis_precision = 2;
+        } else {
+            while ( y_axis_precision < 8 && compare( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) ) {
+                ++y_axis_precision;
+            }
         }
         let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision ), close_precision = this.getPrecision( close_display );
-        if ( y_axis_precision < close_precision ) y_axis_precision = close_precision;
+        if ( y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
         // Remove y axis beneath last price
         //let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 6 ) this.margin_right = 50;
@@ -380,7 +385,7 @@ class Chartaholic {
             //console.log( x, dx );
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'grid' );
-            element.setAttributeNS( null, 'd', `M${dx},0L${dx},${this.height - this.margin_bottom}` );
+            element.setAttributeNS( null, 'd', `M${ dx },0L${ dx },${ this.height - this.margin_bottom }` );
             if ( this.gridlines ) this.svg.appendChild( element );
             this.svg.appendChild( this.text( dx, this.height - 2, moment( x ).format( 'MMM D' ), 'xaxis', 'middle', 'start' ) );
         }
@@ -388,7 +393,7 @@ class Chartaholic {
         for ( let y of this.ticks_y ) {
             let element = document.createElementNS( this.namespace, 'path' );
             element.setAttributeNS( null, 'class', 'grid' );
-            element.setAttributeNS( null, 'd', `M0,${this.dy( y )}L${this.width - ( this.margin_right * 0.275 )},${this.dy( y )}` );
+            element.setAttributeNS( null, 'd', `M0,${ this.dy( y ) }L${ this.width - ( this.margin_right * 0.275 ) },${ this.dy( y ) }` );
             if ( this.gridlines ) this.svg.appendChild( element );
             //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
             let display = this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' );
@@ -405,7 +410,7 @@ class Chartaholic {
                 rect.setAttributeNS( null, "y", this.height - ( rect_height + 20 ) );//this.dy( this.height ) - ( this.margin_y + 4 ) );
                 rect.setAttributeNS( null, "width", size );
                 rect.setAttributeNS( null, "height", rect_height );
-                rect.setAttributeNS( null, "class", `${tick.c >= tick.o ? 'up' : 'down'} vol` );
+                rect.setAttributeNS( null, "class", `${ tick.c >= tick.o ? 'up' : 'down' } vol` );
                 this.svg.appendChild( rect );
             }
         }
@@ -475,12 +480,12 @@ class Chartaholic {
         //let y_ticks = [MAX_Y, (MAX_Y + MIN_Y) / 2, MIN_Y];
         //let dateFormat = 'll'; // https://momentjs.com
         //let xticks = show_time ? quartileBounds(data.map(d => d.time)).map(v => `<div data-value='${moment(v).format(dateFormat)}'></div>`) : x_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
-        //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
+        //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${format_usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
         let svg = this.svg = document.createElementNS( this.namespace, "svg" ), color;
         //svg.style.strokeWidth = "1px";
-        svg.style.width = `${this.width}px`;
-        svg.style.height = `${this.height}px`;
-        svg.setAttributeNS( null, 'class', `Chart ${this.theme} ${this.style}` );
+        svg.style.width = `${ this.width }px`;
+        svg.style.height = `${ this.height }px`;
+        svg.setAttributeNS( null, 'class', `Chart ${ this.theme } ${ this.style }` );
         svg.setAttributeNS( null, 'width', this.width );
         svg.setAttributeNS( null, 'height', this.height );
         svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
@@ -492,13 +497,13 @@ class Chartaholic {
             color = tick.c >= tick.o ? 'up' : 'down';
             if ( this.structure ) this.custom_structure( tick );
             let candle = document.createElementNS( this.namespace, 'path' );
-            candle.setAttributeNS( null, 'class', `${color} tip` );
+            candle.setAttributeNS( null, 'class', `${ color } tip` );
             let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
-            let wick_top = `M${this.dx( tick.x + halfwick )},${this.dy( tick.h )}L${this.dx( tick.x + halfwick )},${this.dy( wick_highest )}`;
-            let wick_bot = `M${this.dx( tick.x + halfwick )},${this.dy( wick_lowest )}L${this.dx( tick.x + halfwick )},${this.dy( tick.l )}`;
-            let candle_body = `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.o )}L${this.dx( tick.x + wickwidth )},${this.dy( tick.c )}L${this.dx( tick.x )},${this.dy( tick.c )}Z`;
+            let wick_top = `M${ this.dx( tick.x + halfwick ) },${ this.dy( tick.h ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( wick_highest ) }`;
+            let wick_bot = `M${ this.dx( tick.x + halfwick ) },${ this.dy( wick_lowest ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( tick.l ) }`;
+            let candle_body = `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.c ) }L${ this.dx( tick.x ) },${ this.dy( tick.c ) }Z`;
             candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
-            candle.setAttributeNS( null, tooltip_class, `<b>${moment( tick.time ).calendar()}</b><br/><b>Open:</b> ${tick.o}<br/><b>High:</b> ${tick.h}<br/><b>Low:</b> ${tick.l}<br/><b>Close:</b> ${tick.c}<br/>${tick.v > 0 ? `<b>Volume:</b> ${Math.round( tick.v ).toLocaleString()}` : ''}` );
+            candle.setAttributeNS( null, tooltip_class, `<b>${ moment( tick.time ).calendar() }</b><br/><b>Open:</b> ${ tick.o }<br/><b>High:</b> ${ tick.h }<br/><b>Low:</b> ${ tick.l }<br/><b>Close:</b> ${ tick.c }<br/>${ tick.v > 0 ? `<b>Volume:</b> ${ Math.round( tick.v ).toLocaleString() }` : '' }` );
             svg.appendChild( candle );
         }
         /////////////////////////////////////////////////
@@ -514,7 +519,7 @@ class Chartaholic {
             svg.appendChild( logo );
         }
         if ( this.lines ) this.draw_lines( this.lines );
-        if ( this.regression ) this.draw_regression();
+        if ( this.regression && this.regression != 'false' ) this.draw_regression();
         if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, 'headline' ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
         //<text id='mousex' dominant-baseline='hanging' x='0' y='0'></text>
@@ -537,10 +542,10 @@ class Chartaholic {
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: mindigits, maximumFractionDigits: maxdigits } ).format( number );
     }
     // Format display for USD currency
-    usd( number, maxPrecision = 2, minPrecision = 0 ) {
+    format_usd( number, maxPrecision = 2, minPrecision = 0 ) {
         if ( maxPrecision < 1 ) maxPrecision = 8;
         let result = Intl.NumberFormat( 'en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
-        if ( minPrecision == 0 ) return result.replace( /\.00$/, '' );
+        //if ( maxPrecision == 0 && minPrecision == 0 ) return result.replace( /\.00$/, '' );
         return result;
     }
     // Format decimal precision
@@ -550,13 +555,14 @@ class Chartaholic {
     }
     // Automatically determine formatting
     autoformat( number, maxPrecision = 8, minPrecision = 0 ) {
+        if ( this.usd && number >= 0.01 ) return this.format_usd( number, 2, 2 );
         //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
         if ( number <= 0.0001 && this.use_sats ) return this.sats( number, maxPrecision, minPrecision );//this.format( number, 8, 2 )
         if ( number < 0.01 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 3 ? 3 : minPrecision
         if ( number < 0.1 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 2 ? 2 : 
-        if ( number >= 1000 ) return this.usd( number, maxPrecision < 2 ? 2 : maxPrecision, minPrecision );
-        if ( number >= 100 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
-        if ( number >= 10 ) return this.usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
+        if ( number >= 1000 ) return this.format_usd( number, maxPrecision < 2 ? 2 : maxPrecision, minPrecision );
+        if ( number >= 100 ) return this.format_usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
+        if ( number >= 10 ) return this.format_usd( number, maxPrecision < 4 ? 4 : maxPrecision, minPrecision );
         if ( number < 10 ) return this.format( number, maxPrecision, minPrecision )
         return this.format( number, maxPrecision, minPrecision );
     }
@@ -568,6 +574,7 @@ class Chartaholic {
         this.style = this.theme == "light" || this.theme == "contrast" ? "light" : "dark";
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
+        this.usd = typeof options.usd == "undefined" ? this.title.includes( "-USD" ) || this.title.includes( "/USD" ) : options.usd;
         this.showAll = typeof options.showAll == "undefined" ? true : options.showAll;
         this.enableZoom = typeof options.enableZoom == "undefined" ? true : options.enableZoom;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
@@ -586,7 +593,7 @@ class Chartaholic {
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
         this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
-        if ( !this.target ) throw `Invalid target: ${target}`;
+        if ( !this.target ) throw `Invalid target: ${ target }`;
         window.addEventListener( 'resize', this.resize.bind( this ) );
         if ( this.enableZoom ) this.target.addEventListener( 'wheel', this.scroll.bind( this ) );
         this.zoom = typeof options.zoom == "undefined" ? 0 : options.zoom;
