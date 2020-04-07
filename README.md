@@ -1,3 +1,5 @@
+[![Latest Version](https://img.shields.io/github/release/jaggedsoft/chartaholic.svg?style=flat-square)](https://github.com/jaggedsoft/chartaholic/releases) [![GitHub last commit](https://img.shields.io/github/last-commit/jaggedsoft/chartaholic.svg?maxAge=2400)](#) <!--[![Downloads](https://img.shields.io/npm/dm/chartaholic.svg?labelColor=blueviolet)](https://npm-stat.com/charts.html?package=chartaholic&from=2017-07-01&to=2020-04-01) [![npm downloads](https://img.shields.io/npm/dt/chartaholic.svg?maxAge=7200)](https://www.npmjs.com/package/chartaholic) --> [![jaggedsoft on Twitter](https://img.shields.io/twitter/follow/jaggedsoft.svg?style=social)](https://twitter.com/jaggedsoft)
+
 This software is licensed as free to use, but you must share improvements to the source code by sending pull requests to this repository.
 
 #### Examples
