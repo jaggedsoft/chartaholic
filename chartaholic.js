@@ -459,6 +459,21 @@ class Chartaholic {
             if ( ll < this.min_y ) this.min_y = ll;
             if ( hh > this.max_y ) this.max_y = hh;
         }
+
+        // overlay: ['SMA50',sma50,'#E91E63']
+        if ( this.overlay && this.showAll ) {
+            for ( let line of this.overlay ) {
+                let indicatordata = line[1];
+                if ( Array.isArray( indicatordata ) ) { // Array, use each value
+                    let ll = Math.min( ...indicatordata );
+                    let hh = Math.max( ...indicatordata );
+                    if ( ll < this.min_y ) this.min_y = ll;
+                    if ( hh > this.max_y ) this.max_y = hh;
+                } else {
+                    // OHLC
+                }
+            }
+        }
         this.min_x = Math.min( ...data.map( d => d.x ) );
         this.max_x = Math.max( ...data.map( d => d.x ) ) + 0.5;
         this.max_vol = Math.max( ...data.map( d => d.v ) );
@@ -493,6 +508,26 @@ class Chartaholic {
         if ( this.hlines ) this.draw_hlines( this.hlines );
         let y_axis_precision = this.draw_grid();
         //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision ); //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision );
+
+        if ( this.overlay ) {
+            for ( let line of this.overlay ) {
+                let indicatordata = line[1], delta = data.length - ( indicatordata.length - 1 );
+                console.info( `Overlay: ${ line[0] } (${ indicatordata.length }) delta: ${ delta }` );
+                let poly = document.createElementNS( this.namespace, 'polyline' ), polydata = '';
+                poly.setAttributeNS( null, 'class', 'overlay' );
+                poly.setAttributeNS( null, 'fill', 'none' );
+                poly.setAttributeNS( null, 'stroke-width', '2' );
+                poly.setAttributeNS( null, 'stroke-linejoin', 'round' );
+                poly.setAttributeNS( null, 'stroke', typeof line[2] !== "undefined" ? line[2] : '#E91E63' );
+                for ( let i in indicatordata ) {
+                    let v = indicatordata[i];
+                    polydata+= `${ this.dx( delta++ ) },${ this.dy( v ) } `;
+                }
+                poly.setAttributeNS( null, 'points', polydata );
+                svg.appendChild( poly );
+            }
+        }
+
         for ( let tick of data ) {
             color = tick.c >= tick.o ? 'up' : 'down';
             if ( this.structure ) this.custom_structure( tick );
@@ -515,7 +550,7 @@ class Chartaholic {
             logo.setAttribute( 'x', 0 );
             logo.setAttribute( 'y', this.height - 28 );
             logo.setAttributeNS( 'http://www.w3.org/1999/xlink', 'href', this.watermark );
-            logo.setAttribute( 'onclick', 'location.href = "https://chartaholic.com";' );
+            logo.setAttribute( 'onclick', 'location.href = "https://liquidity.ltd";' );
             svg.appendChild( logo );
         }
         if ( this.lines ) this.draw_lines( this.lines );
@@ -578,6 +613,7 @@ class Chartaholic {
         this.showAll = typeof options.showAll == "undefined" ? true : options.showAll;
         this.enableZoom = typeof options.enableZoom == "undefined" ? true : options.enableZoom;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
+        this.overlay = typeof options.overlay == "undefined" ? [] : options.overlay;
         this.indicators = typeof options.indicators == "undefined" ? [] : options.indicators;
         this.regression = typeof options.regression == "undefined" ? false : options.regression;
         this.structure = typeof options.structure == "undefined" ? false : options.structure;
