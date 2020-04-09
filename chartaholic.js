@@ -367,23 +367,24 @@ class Chartaholic {
 
     draw_grid() {
         let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
-        //console.info( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), y_axis_precision );
         // Remove y axis duplicates
         const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 );
         if ( this.usd ) {
-            y_axis_precision = 2;
+            if ( this.min_y > 0.01 ) y_axis_precision = 2;
+            else if ( this.min_y >= 0.001 ) y_axis_precision = 3;
+            else if ( this.min_y >= 0.0001 ) y_axis_precision = 4;
+            else if ( this.min_y >= 0.00001 ) y_axis_precision = 5;
         } else {
             while ( y_axis_precision < 8 && compare( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) ) {
                 ++y_axis_precision;
             }
         }
         let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision ), close_precision = this.getPrecision( close_display );
-        if ( y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
+        if ( !this.usd && y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
         // Remove y axis beneath last price
         //let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 6 ) this.margin_right = 50;
         else if ( close_display.length < 8 ) this.margin_right = 75;
-        
         this.margin_x = this.width - this.margin_right;
         this.margin_y = this.height - this.margin_bottom;
         for ( let x of this.ticks_x ) {
@@ -408,7 +409,6 @@ class Chartaholic {
         for ( let tick of this.zoomdata ) {
             if ( this.show_volume && tick.v ) {
                 let size = ( this.width / this.zoomdata.length ) - 3.5;
-                //if ( this.zoomdata.length < 20 ) size = size * 2;
                 if ( this.zoomdata.length < 10 ) size = size * 2;
                 let rect = document.createElementNS( this.namespace, "rect" );
                 let rect_height = 40 * ( tick.v / this.max_vol );
@@ -447,7 +447,6 @@ class Chartaholic {
         this.wickpadding = this.width > 1500 ? 4 : this.width > 1000 ? 2 : 1;
         let maxticks_x = this.width > 1500 ? 14 : 7;
         let maxticks_y = this.height > 190 ? 10 : 5;
-        //let maxwidth = this.width / ( data.length - 1 ) - this.wickpadding;
         let wickwidth = 0.6, halfwick = wickwidth / 2;
         if ( this.smoothing ) { // heikin ashi, etc
             /*console.info( data );
@@ -550,7 +549,6 @@ class Chartaholic {
         }
         /////////////////////////////////////////////////
         if ( this.watermark ) {
-            console.info( `watermark: ${ this.watermark.src }` );
             let logo = document.createElementNS( this.namespace, 'image' );
             logo.setAttribute( 'width', this.watermark.width );
             logo.setAttribute( 'height', this.watermark.height );
@@ -591,6 +589,8 @@ class Chartaholic {
     // Format display for USD currency
     format_usd( number, maxPrecision = 2, minPrecision = 0 ) {
         if ( maxPrecision < 1 ) maxPrecision = 8;
+        if ( minPrecision > maxPrecision ) minPrecision = maxPrecision;
+        if ( maxPrecision < minPrecision ) maxPrecision = minPrecision;
         let result = Intl.NumberFormat( 'en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
         //if ( maxPrecision == 0 && minPrecision == 0 ) return result.replace( /\.00$/, '' );
         return result;
@@ -602,7 +602,15 @@ class Chartaholic {
     }
     // Automatically determine formatting
     autoformat( number, maxPrecision = 8, minPrecision = 0 ) {
-        if ( this.usd && number >= 0.01 ) return this.format_usd( number, 2, 2 );
+        if ( this.usd ) {
+            if ( number >= 1 && maxPrecision > 2 ) maxPrecision = 2;
+            else if ( number >= 0.01 && minPrecision < 2 ) minPrecision = 2;
+            else if ( number >= 0.001 && minPrecision < 3 ) minPrecision = 3;
+            else if ( number >= 0.0001 && minPrecision < 4 ) minPrecision = 4;
+            else if ( number >= 0.00001 && minPrecision < 5 ) minPrecision = 5;
+            else if ( number >= 0.000001 && minPrecision < 6 ) minPrecision = 6;
+            return this.format_usd( number, maxPrecision, minPrecision );
+        }
         //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
         if ( number <= 0.0001 && this.use_sats ) return this.sats( number, maxPrecision, minPrecision );//this.format( number, 8, 2 )
         if ( number < 0.01 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 3 ? 3 : minPrecision
