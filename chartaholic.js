@@ -367,17 +367,16 @@ class Chartaholic {
 
     draw_grid() {
         let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
-        // Remove y axis duplicates
-        const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 );
         if ( this.usd ) {
             if ( this.min_y > 0.01 ) y_axis_precision = 2;
             else if ( this.min_y >= 0.001 ) y_axis_precision = 3;
             else if ( this.min_y >= 0.0001 ) y_axis_precision = 4;
             else if ( this.min_y >= 0.00001 ) y_axis_precision = 5;
-        } else {
-            while ( y_axis_precision < 8 && compare( this.autoformat( this.ticks_y[0], y_axis_precision, y_axis_precision ), this.autoformat( this.ticks_y[1], y_axis_precision, y_axis_precision ) ) ) {
-                ++y_axis_precision;
-            }
+        }
+        const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 ), axis = ( precision, index ) => this.autoformat( this.ticks_y[index], precision, precision )
+        const check_duplicates = precision => compare( axis( precision, 0 ), axis( precision, 1 ) ) || compare( axis( precision, 1 ), axis( precision, 2 ) )
+        while ( y_axis_precision < 8 && check_duplicates( y_axis_precision ) ) {
+            ++y_axis_precision;
         }
         let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision ), close_precision = this.getPrecision( close_display );
         if ( !this.usd && y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
