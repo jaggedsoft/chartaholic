@@ -112,6 +112,7 @@ class Chartaholic {
     }
 
     getPrecision( float ) {
+        //return -1 * Math.log10(0.0000001)
         if ( !float || Number.isInteger( float ) ) return 0;
         let digits = float.toString().split( '.' )[1];
         return !digits || typeof digits.length == "undefined" ? 0 : digits.length;
@@ -283,8 +284,10 @@ class Chartaholic {
     }
 
     draw_regression( length = this.regression ) {
-        if ( length === true || length === "true" ) length = 10;
-        let linreg = this.regress( false, this.closes.slice( -length ) );
+        if ( length === true || isNaN( length ) ) length = 10;
+        let series = this.closes.slice( parseInt( length ) * -1 );
+        let linreg = this.regress( false, series );
+        console.info( 'linreg', linreg );
         let xstart = this.count - length, xend = this.count;
         let lines = [
             [xstart, linreg.yupper3, xend, linreg.yupper4],
@@ -292,6 +295,7 @@ class Chartaholic {
             //[xstart, linreg.ylower, xend, linreg.ylower2],
             [xstart, linreg.ylower3, xend, linreg.ylower4]
         ];
+        console.info( 'regression', lines );
         this.draw_lines( lines, {}, 'regression' );
         //let bullish = ( linreg.gain >= 0.88 ) ? true : false;
     }
@@ -366,7 +370,11 @@ class Chartaholic {
     }
 
     draw_grid() {
-        let y_axis_precision = this.getPrecision( Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) ) );
+        let last_close = this.last_tick.c, close_precision = this.getPrecision( this.autoformat( last_close ) );
+        let y_axis_precision = Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) );
+        if ( y_axis_precision < close_precision ) y_axis_precision = close_precision;
+        if ( y_axis_precision < this.minPrecision ) y_axis_precision = this.minPrecision;
+        let use_sats = this.use_sats && this.max_y <= 0.0001 && this.minPrecision <= 5;
         if ( this.usd ) {
             if ( this.min_y > 0.01 ) y_axis_precision = 2;
             else if ( this.min_y >= 0.001 ) y_axis_precision = 3;
@@ -378,8 +386,11 @@ class Chartaholic {
         while ( y_axis_precision < 8 && check_duplicates( y_axis_precision ) ) {
             ++y_axis_precision;
         }
-        let last_close = this.last_tick.c, close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision ), close_precision = this.getPrecision( close_display );
-        if ( !this.usd && y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
+        let close_display = this.autoformat( last_close, y_axis_precision, y_axis_precision, use_sats );
+        if ( !this.usd ) {
+            close_precision = this.getPrecision( close_display );
+            if ( y_axis_precision < close_precision - 1 ) y_axis_precision = close_precision;
+        }
         // Remove y axis beneath last price
         //let closest = this.get_closest( this.ticks_y, last_close );
         if ( close_display.length < 6 ) this.margin_right = 50;
@@ -402,7 +413,7 @@ class Chartaholic {
             element.setAttributeNS( null, 'd', `M0,${ this.dy( y ) }L${ this.width - ( this.margin_right * 0.275 ) },${ this.dy( y ) }` );
             if ( this.gridlines ) this.svg.appendChild( element );
             //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
-            let display = this.autoformat( y, y_axis_precision, y_axis_precision ).replace( '$', '' ).replace( /,/g, '' );
+            let display = this.autoformat( y, y_axis_precision, y_axis_precision, use_sats ).replace( '$', '' ).replace( /,/g, '' );
             this.svg.appendChild( this.text( this.width, this.dy( y ), display, {className: 'axis', anchor:'end', alignment:'middle'} ) );
         }
         for ( let tick of this.zoomdata ) {
@@ -517,7 +528,7 @@ class Chartaholic {
             let firstx = data[0].x;
             for ( let line of this.overlay ) {
                 let indicatordata = line[1], delta = data.length - ( indicatordata.length + 1 );
-                console.info( `Overlay: ${ line[0] } (${ indicatordata.length }) delta: ${ delta }` );
+                //console.info( `Overlay: ${ line[0] } (${ indicatordata.length }) delta: ${ delta }` );
                 let poly = document.createElementNS( this.namespace, 'polyline' ), polydata = '';
                 poly.setAttributeNS( null, 'class', 'overlay' );
                 poly.setAttributeNS( null, 'fill', 'none' );
@@ -538,6 +549,7 @@ class Chartaholic {
             if ( this.structure ) this.custom_structure( tick );
             let candle = document.createElementNS( this.namespace, 'path' );
             candle.setAttributeNS( null, 'class', `${ color } tip` );
+            if ( typeof tick.color !== "undefined" ) candle.setAttributeNS( null, 'fill', tick.color );
             let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
             let wick_top = `M${ this.dx( tick.x + halfwick ) },${ this.dy( tick.h ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( wick_highest ) }`;
             let wick_bot = `M${ this.dx( tick.x + halfwick ) },${ this.dy( wick_lowest ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( tick.l ) }`;
@@ -560,6 +572,23 @@ class Chartaholic {
         }
         if ( this.lines ) this.draw_lines( this.lines );
         if ( this.regression && this.regression != 'false' ) this.draw_regression();
+        const offsetWidth = 20; // Speech bubble path height
+        /*for ( let obj of this.annotations ) {
+            if ( typeof obj.className == "undefined" ) obj.className = "";
+            let group = document.createElementNS( this.namespace, 'g' ), green = obj.className.includes( 'green' ), offsetHeight = green ? 20 : -20;
+            group.setAttributeNS( null, 'class', 'note' );
+            group.setAttributeNS( null, 'transform', `translate(${ this.dx( obj.x ) - offsetWidth },${ this.dy( obj.y ) - offsetHeight })` );
+            let pathData = "M 3.5 0.5 L 35.5 0.5 C 38.5 0.5 38.5 0.5 38.5 3.5 L 38.5 21.5 C 38.5 24.5 38.5 24.5 35.5 24.5 L 24.5 24.5 18.5 30.5 12.5 24.5 3.5 24.5 C 0.5 24.5 0.5 24.5 0.5 21.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5";
+            if ( green ) pathData = 'M 3.5 0.5 L 14.5 0.5 20.5 -5.5 26.5 0.5 33 0.5 C 36.5 0.5 36.5 0.5 36.5 3.5 L 36.5 21.5 C 36.5 24.5 36.5 24.5 33.5 24.5 L 3.5 24.5 C 0.5 24.5 0.5 24.5 0.5 21.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5';
+            let path = document.createElementNS( this.namespace, 'path' );
+            path.setAttributeNS( null, 'stroke', '#000' );
+            path.setAttributeNS( null, 'fill', green ? '#4caf50' : '#f44336' );
+            path.setAttributeNS( null, 'd', pathData );
+            let textElement = this.text( 5, 16, obj.text, obj ); //{className: obj.className, anchor:obj.anchor, alignment:obj.alignment, fontSize:obj.fontSize}
+            group.appendChild( path );
+            group.appendChild( textElement );
+            this.svg.appendChild( group );
+        }*/
         for ( let obj of this.annotations ) {
             let textElement = this.text( this.dx( obj.x ), this.dy( obj.y ), obj.text, obj ); //{className: obj.className, anchor:obj.anchor, alignment:obj.alignment, fontSize:obj.fontSize}
             this.svg.appendChild( textElement );
@@ -581,8 +610,8 @@ class Chartaholic {
         return isFinite( value ) ? value : def;
     }
     // Display sats values instead of small fractions
-    sats( number, maxdigits = 8, mindigits = 1 ) {
-        if ( number <= 0.0001 ) return Math.round( number * 1e8 ).toString();// + " sats";
+    sats( number, maxdigits = 8, mindigits = 2 ) {
+        if ( number <= 0.000099 ) return Math.round( number * 1e8 ).toString();// + " sats";
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: mindigits, maximumFractionDigits: maxdigits } ).format( number );
     }
     // Format display for USD currency
@@ -600,7 +629,7 @@ class Chartaholic {
         return new Intl.NumberFormat( 'en-US', { style: 'decimal', minimumFractionDigits: minPrecision, maximumFractionDigits: maxPrecision } ).format( number );
     }
     // Automatically determine formatting
-    autoformat( number, maxPrecision = 8, minPrecision = 0 ) {
+    autoformat( number, maxPrecision = 8, minPrecision = 0, use_sats = false ) {
         if ( this.usd ) {
             if ( number >= 1 && maxPrecision > 2 ) maxPrecision = 2;
             else if ( number >= 0.01 && minPrecision < 2 ) minPrecision = 2;
@@ -611,7 +640,7 @@ class Chartaholic {
             return this.format_usd( number, maxPrecision, minPrecision );
         }
         //if ( number <= 0.00001 ) return this.format( number, 8, 8 );
-        if ( number <= 0.0001 && this.use_sats ) return this.sats( number, maxPrecision, minPrecision );//this.format( number, 8, 2 )
+        if ( use_sats && number <= 0.00099 ) return this.sats( number, maxPrecision, minPrecision );//this.format( number, 8, 2 )
         if ( number < 0.01 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 3 ? 3 : minPrecision
         if ( number < 0.1 ) return this.format( number, maxPrecision, minPrecision ) //minPrecision < 2 ? 2 : 
         if ( number >= 1000 ) return this.format_usd( number, maxPrecision < 2 ? 2 : maxPrecision, minPrecision );
@@ -646,6 +675,7 @@ class Chartaholic {
         //this.styles = typeof options.styles == "undefined" ? {lines:{}} : options.styles;
         this.lines = typeof options.lines == "undefined" ? [] : options.lines;
         this.hlines = typeof options.hlines == "undefined" ? [] : options.hlines;
+        this.minPrecision = typeof options.minPrecision == "undefined" ? 2 : options.minPrecision;
         this.use_sats = typeof options.use_sats == "undefined" ? true : options.use_sats;
         this.watermark = typeof options.watermark == "undefined" ? "" : options.watermark;
         this.reset();
