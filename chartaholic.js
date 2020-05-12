@@ -14,11 +14,22 @@ class Chartaholic {
     // Append new candle
     append( tick, draw = true ) {
         let time = new Date( tick[this.keys.time] ).getTime();
+        let close = Number( tick[this.keys.close] );
+        if ( this.type == 'line' ) {
+            this.closes.push( close );
+            this.data.push( {
+                x: this.count++,
+                c: close,
+                time
+            } );
+            if ( draw ) this.render();
+            return;
+        }
         let open = Number( tick[this.keys.open] );
         let high = Number( tick[this.keys.high] );
         let low = Number( tick[this.keys.low] );
-        let close = Number( tick[this.keys.close] );
         let volume = typeof tick[this.keys.volume] == "undefined" ? 0 : Number( tick[this.keys.volume] );
+        let color = typeof tick[this.keys.color] !== 'undefined' ? tick[this.keys.color] : null;
         this.opens.push( open );
         this.highs.push( high );
         this.lows.push( low );
@@ -32,7 +43,8 @@ class Chartaholic {
             l: low,
             c: close,
             v: volume,
-            time: time
+            time,
+            color
         } );
         if ( draw ) this.render();
     }
@@ -56,7 +68,8 @@ class Chartaholic {
 
     // Replace all OHLC tick values
     import( ticks, draw = true ) {
-        for ( let key of ['open', 'high', 'low', 'close', 'volume', 'time'] ) {
+        const keys = this.type == 'line' ? ['close', 'time'] : ['open', 'high', 'low', 'close', 'volume', 'time'];
+        for ( let key of keys ) {
             if ( typeof this.keys[key] === "undefined" ) this.keys[key] = key;
         }
         this.reset();
@@ -115,7 +128,7 @@ class Chartaholic {
         //return -1 * Math.log10(0.0000001)
         if ( !float || Number.isInteger( float ) ) return 0;
         let digits = float.toString().split( '.' )[1];
-        return !digits || typeof digits.length == "undefined" ? 0 : digits.length;
+        return !digits || typeof digits.length == "undefined" || isNaN( digits.length ) ? 0 : digits.length;
     }
 
     // Drawing functions: convert world space to screen space
@@ -300,75 +313,6 @@ class Chartaholic {
         //let bullish = ( linreg.gain >= 0.88 ) ? true : false;
     }
 
-    custom_structure( tick ) {
-        const today = moment(), alignment = 'middle', svg = this.svg;
-        //daily open 'day'
-        const week_open = today.startOf( 'week' );
-        const month_open = today.startOf( 'month' ), month_cal = month_open.calendar();
-        const quarter_open = today.startOf( 'quarter' ), quarter_cal = quarter_open.calendar();
-        const year_open = today.startOf( 'year' ), year_cal = year_open.calendar();
-        if ( month_cal == year_cal ) this.drawn.month_open = true;
-        if ( quarter_cal == year_cal ) this.drawn.quarter_open = true;
-        //if ( week_cal == year_cal || typeof this.drawn. ) this.drawn.week_open = true;
-        let tooltipClass = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
-        let d = moment( tick.time ), cal = d.calendar(), last_close = this.last_tick.c
-        let color = this.last_tick.c >= tick.o ? 'green' : 'red';
-        let size = ( this.width / this.zoomdata.length ) - 5;
-        if ( size < 5 ) size = 5;
-        if ( size > 20 ) size = 20;
-        // Yearly Open
-        if ( year_cal == cal && typeof this.drawn.year_open == 'undefined' ) { // year_open.isSame( d, 'd' )
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
-            element.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            element.setAttributeNS( null, 'stroke-dasharray', '4' );
-            this.drawn.year_open = tick.o;
-            svg.appendChild( element );
-            let textElement = this.text( this.width, this.dy( tick.o ) + 1, 'Yearly Open', {className:`structure ${ color }`, anchor:'end', alignment, fontSize:size} );
-            textElement.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            svg.appendChild( textElement );
-        }
-        // Quarterly Open
-        if ( quarter_cal == cal && typeof this.drawn.quarter_open == 'undefined' ) {
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
-            element.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            element.setAttributeNS( null, 'stroke-dasharray', '4' );
-            this.drawn.quarter_open = tick.o;
-            svg.appendChild( element );
-            let textElement = this.text( this.width, this.dy( tick.o ) + 1, 'Quarterly Open', {className: `structure ${ color }`, anchor:'end', alignment, fontSize:size} );
-            textElement.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            svg.appendChild( textElement );
-        }
-        // Monthly Open
-        if ( month_cal == cal && typeof this.drawn.month_open == 'undefined' ) {
-            console.log( "monthly open", last_close, tick.o, color );
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( this.width ) },${ this.dy( tick.o ) }` );
-            element.setAttributeNS( null, 'stroke-dasharray', '4' );
-            this.drawn.month_open = tick.o;
-            svg.appendChild( element );
-            let textElement = this.text( this.width, this.dy( tick.o ) + 1, 'Monthly Open', {className: `structure ${ color }`, anchor:'end', alignment, fontSize:size} );
-            textElement.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            svg.appendChild( textElement );
-        }
-        // Weekly Open
-        /*if ( week_open.isSame( d, 'day' ) && typeof this.drawn.week_open == 'undefined' ) {
-            let element = document.createElementNS( this.namespace, 'path' );
-            element.setAttributeNS( null, 'class', 'structure tip' );
-            element.setAttributeNS( null, 'd', `M${this.dx( tick.x )},${this.dy( tick.o )}L${this.dx( this.width )},${this.dy( tick.o )}` );
-            element.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            this.drawn.week_open = tick.o;
-            if ( !this.gridlines ) svg.appendChild( element );
-            let textElement = this.text( this.width, this.dy( tick.o ) + 1, 'Weekly Open', {className: `structure ${color}`, anchor:'end', alignment, fontSize:size} );
-            textElement.setAttributeNS( null, tooltipClass, this.autoformat( tick.o ) );
-            this.svg.appendChild( textElement );
-        }*/
-    }
-
     draw_grid() {
         let last_close = this.last_tick.c, close_precision = this.getPrecision( this.autoformat( last_close ) );
         let y_axis_precision = Math.max( ...this.ticks_y.map( d => this.autoformat( d ) ) );
@@ -464,36 +408,21 @@ class Chartaholic {
             console.info( data );*/
         }
         //console.table( data );
+        let svg = this.svg = document.createElementNS( this.namespace, "svg" ), color;
+        svg.style.width = `${ this.width }px`;
+        svg.style.height = `${ this.height }px`;
+        svg.setAttributeNS( null, 'class', `Chart ${ this.type } ${ this.theme } ${ this.style }` );
+        svg.setAttributeNS( null, 'width', this.width );
+        svg.setAttributeNS( null, 'height', this.height );
+        svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
+        const tooltipClass = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
         this.drawn = {};
         this.last_tick = data.slice( -1 )[0];
-        this.min_y = Math.min( ...data.map( d => d.l ) );
-        this.max_y = Math.max( ...data.map( d => d.h ) );
-        if ( this.hlines && this.showAll ) {
-            let ll = Math.min( ...this.hlines.map( d => Number( d[1] ) ) );
-            let hh = Math.max( ...this.hlines.map( d => Number( d[1] ) ) );
-            if ( ll < this.min_y ) this.min_y = ll;
-            if ( hh > this.max_y ) this.max_y = hh;
-        }
-
-        // overlay: ['SMA50',sma50,'#E91E63']
-        if ( this.overlay && this.showAll ) {
-            for ( let line of this.overlay ) {
-                let indicatordata = line[1];
-                if ( Array.isArray( indicatordata ) ) { // Array, use each value
-                    let ll = Math.min( ...indicatordata );
-                    let hh = Math.max( ...indicatordata );
-                    if ( ll < this.min_y ) this.min_y = ll;
-                    if ( hh > this.max_y ) this.max_y = hh;
-                } else {
-                    // OHLC
-                }
-            }
-        }
-        this.min_x = Math.min( ...data.map( d => d.x ) );
-        this.max_x = Math.max( ...data.map( d => d.x ) ) + 0.5;
-        this.max_vol = Math.max( ...data.map( d => d.v ) );
-        this.min_time = Math.min( ...data.map( d => d.time ) );
-        this.max_time = Math.max( ...data.map( d => d.time ) );
+        const xMap = data.map( d => d.x ), timeMap = data.map( d => d.time );
+        this.min_x = Math.min( ...xMap );
+        this.max_x = Math.max( ...xMap ) + 0.5;
+        this.min_time = Math.min( ...timeMap );
+        this.max_time = Math.max( ...timeMap );
         this.ticks_x = this.timeRange( this.min_time, this.max_time, maxticks_x );
         this.ticks_y = this.calculateTicks( this.min_y, this.max_y, maxticks_y );
         //ticks_x / 1e3 difference tells you the timeframe. 1d = 86400
@@ -502,61 +431,92 @@ class Chartaholic {
         this.time_delta = data[1].time - data[0].time;
         //console.log( `time delta: ` + this.time_delta );
         this.time_range = this.max_time - this.min_time;
-        //this.mid_x = ( this.min_x + this.min_y ) / 2;
-        //this.mid_y = ( this.max_y + this.min_y ) / 2;
-        //console.log( `delta: ${this.range_x}, ${this.range_y}` );
-        //console.info( `min_x: ${this.min_x}, min_y: ${this.min_y}, max_x: ${this.max_x}, max_y: ${this.max_y}` );
-        //let x_ticks = scaleTicks(TICK_COUNT, MAX_X, MIN_X);
-        //let y_ticks = [MAX_Y, (MAX_Y + MIN_Y) / 2, MIN_Y];
-        //let dateFormat = 'll'; // https://momentjs.com
-        //let xticks = show_time ? quartileBounds(data.map(d => d.time)).map(v => `<div data-value='${moment(v).format(dateFormat)}'></div>`) : x_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
-        //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${format_usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
-        let svg = this.svg = document.createElementNS( this.namespace, "svg" ), color;
-        //svg.style.strokeWidth = "1px";
-        svg.style.width = `${ this.width }px`;
-        svg.style.height = `${ this.height }px`;
-        svg.setAttributeNS( null, 'class', `Chart ${ this.theme } ${ this.style }` );
-        svg.setAttributeNS( null, 'width', this.width );
-        svg.setAttributeNS( null, 'height', this.height );
-        svg.setAttributeNS( null, 'shape-rendering', 'crispEdges' ); // Remove blur
-        const tooltipClass = typeof tippy == 'undefined' ? 'title' : 'data-tippy-content';
-        if ( this.hlines ) this.draw_hlines( this.hlines );
-        let y_axis_precision = this.draw_grid();
-        //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision ); //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision );
-
-        if ( this.overlay ) {
-            let firstx = data[0].x;
-            for ( let line of this.overlay ) {
-                let indicatordata = line[1], delta = data.length - ( indicatordata.length + 1 );
-                //console.info( `Overlay: ${ line[0] } (${ indicatordata.length }) delta: ${ delta }` );
-                let poly = document.createElementNS( this.namespace, 'polyline' ), polydata = '';
-                poly.setAttributeNS( null, 'class', 'overlay' );
-                poly.setAttributeNS( null, 'fill', 'none' );
-                poly.setAttributeNS( null, 'stroke-linejoin', 'round' );
-                poly.setAttributeNS( null, 'stroke', typeof line[2] !== "undefined" ? line[2] : '#E91E63' ); // todo: material A200 accent array
-                poly.setAttributeNS( null, 'stroke-width', typeof line[3] !== "undefined" ? line[3] : '1' );
-                for ( let i in indicatordata ) {
-                    let v = indicatordata[i];
-                    polydata+= `${ this.dx( firstx + delta++ ) },${ this.dy( v ) } `;
-                }
-                poly.setAttributeNS( null, 'points', polydata );
-                svg.appendChild( poly );
-            }
+        if ( this.hlines && this.showAll ) {
+            const hlinesMap = this.hlines.map( d => Number( d[1] ) );
+            let ll = Math.min( ...hlinesMap ), hh = Math.max( ...hlinesMap );
+            if ( ll < this.min_y ) this.min_y = ll;
+            if ( hh > this.max_y ) this.max_y = hh;
         }
 
-        for ( let tick of data ) {
-            color = tick.c >= tick.o ? 'up' : 'down';
-            if ( this.structure ) this.custom_structure( tick );
-            let candle = document.createElementNS( this.namespace, 'path' );
-            candle.setAttributeNS( null, 'class', `${ color } tip` );
-            if ( typeof tick.color !== "undefined" ) candle.setAttributeNS( null, 'fill', tick.color );
-            let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
-            let wick_top = `M${ this.dx( tick.x + halfwick ) },${ this.dy( tick.h ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( wick_highest ) }`;
-            let wick_bot = `M${ this.dx( tick.x + halfwick ) },${ this.dy( wick_lowest ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( tick.l ) }`;
-            let candle_body = `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.c ) }L${ this.dx( tick.x ) },${ this.dy( tick.c ) }Z`;
-            candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
-            candle.setAttributeNS( null, tooltipClass, `<b>${ moment( tick.time ).calendar() }</b><br/><b>Open:</b> ${ tick.o }<br/><b>High:</b> ${ tick.h }<br/><b>Low:</b> ${ tick.l }<br/><b>Close:</b> ${ tick.c }<br/>${ tick.v > 0 ? `<b>Volume:</b> ${ Math.round( tick.v ).toLocaleString() }` : '' }` );
-            svg.appendChild( candle );
+        // overlay: ['SMA50',sma50,'#E91E63']
+        if ( this.overlay && this.showAll ) {
+            for ( let line of this.overlay ) {
+                let indicatorData = line[1];
+                if ( Array.isArray( indicatorData ) ) { // Array, use each value
+                    let ll = Math.min( ...indicatorData ), hh = Math.max( ...indicatorData );
+                    if ( ll < this.min_y ) this.min_y = ll;
+                    if ( hh > this.max_y ) this.max_y = hh;
+                } else {
+                    // OHLC
+                }
+            }
+        }
+        if ( this.type == 'ohlcv' ) {
+            this.max_vol = Math.max( ...data.map( d => d.v ) );
+            this.min_y = Math.min( ...data.map( d => d.l ) );
+            this.max_y = Math.max( ...data.map( d => d.h ) );
+            //this.mid_x = ( this.min_x + this.min_y ) / 2;
+            //this.mid_y = ( this.max_y + this.min_y ) / 2;
+            //console.log( `delta: ${this.range_x}, ${this.range_y}` );
+            //console.info( `min_x: ${this.min_x}, min_y: ${this.min_y}, max_x: ${this.max_x}, max_y: ${this.max_y}` );
+            //let x_ticks = scaleTicks(TICK_COUNT, MAX_X, MIN_X);
+            //let y_ticks = [MAX_Y, (MAX_Y + MIN_Y) / 2, MIN_Y];
+            //let dateFormat = 'll'; // https://momentjs.com
+            //let xticks = show_time ? quartileBounds(data.map(d => d.time)).map(v => `<div data-value='${moment(v).format(dateFormat)}'></div>`) : x_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
+            //let yticks = MAX_Y > 999 ? y_ticks.map(v => `<div data-value='${format_usd(v)}'></div>`) :  y_ticks.map(v => `<div data-value='${format(v, precision)}'></div>`);
+
+            if ( this.hlines ) this.draw_hlines( this.hlines );
+            this.draw_grid();
+            //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision ); //if ( this.hlines ) this.draw_hlines( this.hlines, y_axis_precision );
+
+            if ( this.overlay ) {
+                let firstx = data[0].x;
+                for ( let line of this.overlay ) {
+                    let indicatorData = line[1], delta = data.length - ( indicatorData.length + 1 );
+                    //console.info( `Overlay: ${ line[0] } (${ indicatorData.length }) delta: ${ delta }` );
+                    let poly = document.createElementNS( this.namespace, 'polyline' ), polydata = '';
+                    poly.setAttributeNS( null, 'class', 'overlay' );
+                    poly.setAttributeNS( null, 'fill', 'none' );
+                    poly.setAttributeNS( null, 'stroke-linejoin', 'round' );
+                    poly.setAttributeNS( null, 'stroke', typeof line[2] !== "undefined" ? line[2] : '#E91E63' ); // todo: material A200 accent array
+                    poly.setAttributeNS( null, 'stroke-width', typeof line[3] !== "undefined" ? line[3] : '1' );
+                    poly.setAttributeNS( null, 'stroke-dasharray', typeof line[4] !== "undefined" ? line[4] : '1' );
+                    for ( let i in indicatorData ) {
+                        let v = indicatorData[i];
+                        polydata+= `${ this.dx( firstx + delta++ ) },${ this.dy( v ) } `;
+                    }
+                    poly.setAttributeNS( null, 'points', polydata );
+                    svg.appendChild( poly );
+                }
+            }
+
+            for ( let tick of data ) {
+                color = tick.c >= tick.o ? 'up' : 'down';
+                let candle = document.createElementNS( this.namespace, 'path' );
+                if ( tick.color ) {
+                    candle.setAttributeNS( null, 'class', 'tip' );
+                    candle.style = `fill:${ tick.color };stroke:${ tick.color }`;
+                } else candle.setAttributeNS( null, 'class', `${ color } tip` );
+                let wick_highest = Math.max( tick.o, tick.c ), wick_lowest = Math.min( tick.o, tick.c );
+                let wick_top = `M${ this.dx( tick.x + halfwick ) },${ this.dy( tick.h ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( wick_highest ) }`;
+                let wick_bot = `M${ this.dx( tick.x + halfwick ) },${ this.dy( wick_lowest ) }L${ this.dx( tick.x + halfwick ) },${ this.dy( tick.l ) }`;
+                let candle_body = `M${ this.dx( tick.x ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.o ) }L${ this.dx( tick.x + wickwidth ) },${ this.dy( tick.c ) }L${ this.dx( tick.x ) },${ this.dy( tick.c ) }Z`;
+                candle.setAttributeNS( null, 'd', wick_top + candle_body + wick_bot );
+                candle.setAttributeNS( null, tooltipClass, `<b>${ moment( tick.time ).calendar() }</b><br/><b>Open:</b> ${ tick.o }<br/><b>High:</b> ${ tick.h }<br/><b>Low:</b> ${ tick.l }<br/><b>Close:</b> ${ tick.c }<br/>${ tick.v > 0 ? `<b>Volume:</b> ${ Math.round( tick.v ).toLocaleString() }` : '' }` );
+                svg.appendChild( candle );
+            }
+        } else if ( this.type == 'line' ) {
+            if ( !isNaN( data[0].c ) ) {
+                const series = data.map( d => d.c );
+                this.min_y = Math.min( ...series );
+                this.max_y = Math.max( ...series );
+                if ( this.hlines ) this.draw_hlines( this.hlines );
+                this.draw_grid();
+                let polyline = document.createElementNS( this.namespace, 'polyline' );
+                polyline.setAttributeNS( null, 'class', 'line' );
+                polyline.setAttributeNS( null, 'points', data.map( d => `${ this.dx( d.x ) },${ this.dy( d.c ) }` ).join( ' ' ) );
+                svg.appendChild( polyline );
+            }
         }
         /////////////////////////////////////////////////
         if ( this.watermark ) {
@@ -606,6 +566,15 @@ class Chartaholic {
     scaleTicks( count, max, min ) {
         return [...Array( count ).keys()].map( d => max / ( count - 1 ) * parseInt( d ) )
     }
+    isUSD( title ) {
+        title = title.replace( '-','/' );
+        if ( title.includes( "/USD" ) ) return true;
+        const stablecoins = ['BUSD','TUSD','USDC','PAX'];
+        for ( let asset of stablecoins ) {
+            if ( title.includes( `/${ asset }` ) ) return true;
+        }
+        return false;
+    }
     nz( value, def = 0 ) {
         return isFinite( value ) ? value : def;
     }
@@ -630,6 +599,8 @@ class Chartaholic {
     }
     // Automatically determine formatting
     autoformat( number, maxPrecision = 8, minPrecision = 0, use_sats = false ) {
+        if ( isNaN( maxPrecision ) ) maxPrecision = 8;
+        if ( isNaN( minPrecision ) ) minPrecision = 0;
         if ( this.usd ) {
             if ( number >= 1 && maxPrecision > 2 ) maxPrecision = 2;
             else if ( number >= 0.01 && minPrecision < 2 ) minPrecision = 2;
@@ -653,11 +624,12 @@ class Chartaholic {
     constructor( target, options = {} ) {
         this.namespace = "http://www.w3.org/2000/svg";
         this.target = typeof target == "string" ? document.querySelector( target ) : target;
+        this.type = typeof options.type == "undefined" ? "ohlcv" : options.type;
         this.theme = typeof options.theme == "undefined" ? "standard" : options.theme;
         this.style = this.theme == "light" || this.theme == "contrast" ? "light" : "dark";
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
-        this.usd = typeof options.usd == "undefined" ? this.title.includes( "-USD" ) || this.title.includes( "/USD" ) : options.usd;
+        this.usd = typeof options.usd == "undefined" ? this.isUSD( this.title ): options.usd;
         this.showAll = typeof options.showAll == "undefined" ? true : options.showAll;
         this.enableZoom = typeof options.enableZoom == "undefined" ? true : options.enableZoom;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
@@ -665,7 +637,6 @@ class Chartaholic {
         this.annotations = typeof options.annotations == "undefined" ? [] : options.annotations; //[{text,x,y,className,anchor,alignment,size}]
         this.indicators = typeof options.indicators == "undefined" ? [] : options.indicators;
         this.regression = typeof options.regression == "undefined" ? false : options.regression;
-        this.structure = typeof options.structure == "undefined" ? false : options.structure;
         this.smoothing = typeof options.smoothing == "undefined" ? false : options.smoothing;
         this.gridlines = typeof options.gridlines == "undefined" ? true : options.gridlines;
         //this.analysis = typeof options.analysis == "undefined" ? false : options.analysis;
