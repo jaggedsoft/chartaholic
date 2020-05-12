@@ -6,6 +6,7 @@ This software is licensed as free to use, but you must share improvements to the
 ![Indicator Example](https://cdn.discordapp.com/attachments/538472814626209793/697188143409004615/darkpool-liquidity.png)
 ![Binance Futures: BTC](https://cdn.discordapp.com/attachments/538472814626209793/697187567937912902/darkpool.png)
 ![Binance OGN-BTC](https://cdn.discordapp.com/attachments/538472814626209793/697188018217549824/darkpool.png)
+![Line Chart](https://media.discordapp.net/attachments/569865969120575519/709597735799750666/unknown.png)
 > The goal is to become an open source alternative to TradingView with built-in functions available in Javascript.
 
 #### Getting Started
