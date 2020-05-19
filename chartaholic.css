@@ -1,3 +1,11 @@
+/* aesthetically pleasing text stroke
+    font: bold 20px sans-serif;
+    stroke: crimson;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    paint-order: stroke;
+*/
+
 #chart {
     margin: auto auto;
     width: 90vw;
@@ -20,7 +28,7 @@ body {
     background:#fff
 }
 
-svg {
+svg.Chart {
     /* filter: drop-shadow( -1px 2px 1px rgba(0,0,0,0.75)); */
     margin: auto auto;
     fill: none;
@@ -32,11 +40,17 @@ svg {
     /* box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.1) */
 }
 
-polyline {
+/* .Chart polyline {
     stroke: #6d1e7f;
     fill: #6d1e7f;
     stroke-width: 1px;
     opacity: 0.2
+} */
+.Chart.line polyline.line {
+    stroke:#0088ff;
+    stroke-width:4px;
+    stroke-linejoin:round;
+    paint-order:stroke;
 }
 
 .wick {
@@ -82,6 +96,16 @@ text {
     /* text-shadow: 1px 1px #000, 0 0 3px rgba(0,0,0,1); */
 }
 
+.hollow .lastprice {
+    /* stroke:none !important; */
+    font:bold 20px sans-serif;
+    fill:#fff;
+    stroke: #F50057;
+    stroke-width:2px;
+    stroke-linejoin:round;
+    paint-order:stroke;
+}
+
 .blue .lastprice {
     fill:#4db872
 }
@@ -115,16 +139,19 @@ text {
     shape-rendering: geometricPrecision
 }*/
 path.regression {
-    stroke-width:2px;
-    stroke:#fff;
+    stroke-width:1px;
+    stroke:#aaa;
     stroke-dasharray:2px;
-    shape-rendering: auto /*geometricPrecision*/
+    /*shape-rendering: auto; geometricPrecision*/
+}
+.dark path.regression {
+    stroke:#F50057;
 }
 
 path.lines {
     stroke-width:1px;
     stroke:#FF5722;
-    shape-rendering: auto
+    /* shape-rendering: auto */
 }
 
 path.structure {
@@ -140,12 +167,6 @@ text.structure {
     opacity:0.6;
     /*text-shadow: 1px 1px #000;*/
     text-shadow: 0 0 3px rgba(0,0,0,0.75)
-}
-text.green {
-    fill: #399F6E
-}
-text.red {
-    fill: #FE4747
 }
 
 .blue .down {
@@ -251,9 +272,13 @@ path.pink {
 }
 text.green {
     fill:#4CAF50
+    /* fill:#00e676 */
+    /* fill:#399F6E */
 }
 text.red {
-    fill:#f44336
+    fill:#ff5252
+    /* fill:#f44336 */
+    /* fill:#FE4747 */
 }
 text.margin {
     font:13px sans-serif
@@ -269,4 +294,14 @@ text.hover:hover {
 }
 .vol {
     opacity:.33
+}
+
+.Chart .note .small text {
+    font-size:8px;
+}
+.Chart .note text {
+    font:12px sans-serif;
+    color:#fff;
+    fill:#fff;
+    white-space:nowrap;
 }
