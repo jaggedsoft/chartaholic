@@ -1,6 +1,7 @@
 class Chartaholic {
     reset() {
         this.zoom = 0;
+        this.fullscrolling = false;
         this.count = 0;
         this.opens = [];
         this.highs = [];
@@ -93,8 +94,12 @@ class Chartaholic {
                 element.outerHTML = "";
             }
         }
+        if ( event.altKey ) {
+            this.fullscrolling = true;
+        }
         const delta = Math.sign( event.deltaY );
         this.zoom += delta;
+
         //console.info( "zoom: " + this.zoom );
         this.render();
     }
@@ -294,7 +299,7 @@ class Chartaholic {
                 }
             }
         }
-        
+
         if ( this.hlines && this.showAll ) {
             const hlinesMap = this.hlines.map( d => Number( d[1] ) );
             let ll = Math.min( ...hlinesMap ), hh = Math.max( ...hlinesMap );
@@ -317,7 +322,7 @@ class Chartaholic {
             element.setAttributeNS( null, tooltipClass, tooltip );
             this.svg.appendChild( element );
             //annotation = `${autofmt} ${annotation}`;
-            if ( annotation ) this.svg.appendChild( this.text( 1, dy, annotation, {className: color, anchor:"start", alignment:"middle", fontSize:"10px"} ) );
+            if ( annotation ) this.svg.appendChild( this.text( 1, dy, annotation, { className: color, anchor: "start", alignment: "middle", fontSize: "10px" } ) );
             //if ( annotation ) this.svg.appendChild( this.text( 1, dy, annotation, {className:`hover thin ${color}`, anchor:"start", alignment:"middle" } ) );
             //if ( annotation ) this.svg.appendChild( this.text( this.width, dy, annotation, {className:`margin ${color}`, anchor:"end", alignment:"middle" } ) );
         }
@@ -367,18 +372,18 @@ class Chartaholic {
                 let rounded = this.roundMinutes( dateFns.format( x, 'mm' ) );
                 xdisplay = xdisplay = dateFns.format( x, `h:${ rounded }a` );
             } else xdupes.push( xdate );
-            this.svg.appendChild( this.text( dx, this.height - 2, xdisplay, {className: 'xaxis', anchor:'middle', alignment:'start'} ) );
+            this.svg.appendChild( this.text( dx, this.height - 2, xdisplay, { className: 'xaxis', anchor: 'middle', alignment: 'start' } ) );
         }
         //let tick_distance = ( this.ticks_y[1] - this.ticks_y[0] ) / 3;
         for ( let y of this.ticks_y ) {
             //if ( y == closest && Math.abs( closest - last_close ) < tick_distance ) continue;
             let display = this.autoformat( y, y_axis_precision, y_axis_precision, satsDisplay ).replace( '$', '' );
             if ( !this.yAxisCommas ) display = display.replace( /,/g, '' );
-            this.svg.appendChild( this.text( this.width, this.dy( y ), display, {className: 'axis', anchor:'end', alignment:'middle'} ) );
+            this.svg.appendChild( this.text( this.width, this.dy( y ), display, { className: 'axis', anchor: 'end', alignment: 'middle' } ) );
         }
         let display_y = this.nz( this.dy( last_close ) );
         if ( this.usd && !this.close_display.startsWith( '$' ) ) this.close_display = `$${ this.close_display }`;
-        let element = this.text( this.width, display_y < 10 ? 10 : display_y, this.close_display, {className:'lastprice', anchor:'end', alignment:'middle'} );
+        let element = this.text( this.width, display_y < 10 ? 10 : display_y, this.close_display, { className: 'lastprice', anchor: 'end', alignment: 'middle' } );
         if ( !element ) return;
         this.svg.appendChild( element );
         //console.log( element.getComputedTextLength() );
@@ -424,7 +429,7 @@ class Chartaholic {
             else if ( this.min_y >= 0.0001 ) y_axis_precision = 4;
             else if ( this.min_y >= 0.00001 ) y_axis_precision = 5;
         }
-        const compare = ( a,b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 ), axis = ( precision, index ) => this.autoformat( this.ticks_y[index], precision, precision )
+        const compare = ( a, b ) => ( a == b ) || ( Math.abs( a.length - b.length ) > 2 ), axis = ( precision, index ) => this.autoformat( this.ticks_y[index], precision, precision )
         const check_duplicates = precision => compare( axis( precision, 0 ), axis( precision, 1 ) ) || compare( axis( precision, 1 ), axis( precision, 2 ) )
         while ( y_axis_precision < 8 && check_duplicates( y_axis_precision ) ) {
             ++y_axis_precision;
@@ -470,7 +475,12 @@ class Chartaholic {
         let maxticks_x = this.width > 1500 ? 14 : 7;
         let maxticks_y = this.height > 190 ? 10 : 5;
         if ( !json ) json = this.data;
-        let data = this.zoomdata = json.slice( this.zoom * -7 );
+        let data;
+        if ( this.fullscrolling ) {
+            data = this.zoomdata = json.slice( this.zoom * -7, ( this.zoom * -7 ) + this.zoomdata.length );
+        } else {
+            data = this.zoomdata = json.slice( this.zoom * -7 );
+        }
         if ( data.length < 2 ) return this.zoom = 0;
         if ( this.smoothing ) { // heikin ashi, etc
             /*console.info( data );
@@ -523,8 +533,15 @@ class Chartaholic {
                 let firstx = data[0].x;
                 for ( let line of this.overlay ) {
                     if ( !line[1] || !line[1].length ) continue;
-                    let indicatorData = line[1], delta = data.length - ( indicatorData.length + 1 );
-                    //console.info( `Overlay: ${ line[0] } (${ indicatorData.length }) delta: ${ delta }` );
+                    // let indicatorData = line[1], delta = data.length - (indicatorData.length + 1);
+                    let indicatorData = line[1];
+                    let delta;
+                    if ( this.fullscrolling ) {
+                        delta = ( json.length - indicatorData.length - firstx - 1 );
+                    } else {
+                        delta = data.length - ( indicatorData.length + 1 );
+                    }
+                    // console.info( `Overlay: indicatorData.length: ${ indicatorData.length }  delta old: ${ data.length - ( indicatorData.length + 1 ) } delta: ${ delta } firstx: ${ firstx } data.length: ${ data.length }` );
                     let poly = document.createElementNS( this.namespace, 'polyline' ), polydata = '';
                     poly.setAttributeNS( null, 'class', 'overlay' );
                     poly.setAttributeNS( null, 'fill', 'none' );
@@ -534,13 +551,13 @@ class Chartaholic {
                     poly.setAttributeNS( null, 'stroke-dasharray', typeof line[4] !== "undefined" ? line[4] : '1' );
                     for ( let i in indicatorData ) {
                         let v = indicatorData[i];
-                        polydata+= `${ this.nz( this.dx( firstx + delta++ ) ) },${ this.nz( this.dy( v ) ) } `;
+                        polydata += `${ this.nz( this.dx( firstx + delta++ ) ) },${ this.nz( this.dy( v ) ) } `;
                     }
                     poly.setAttributeNS( null, 'points', polydata );
                     svg.appendChild( poly );
                 }
             }
-
+            this.fullscrolling = false;
             for ( let tick of data ) {
                 color = tick.c >= tick.o ? 'up' : 'down';
                 let candle = document.createElementNS( this.namespace, 'path' );
@@ -606,7 +623,7 @@ class Chartaholic {
             let textElement = this.text( this.nz( this.dx( obj.x ) ), this.nz( this.dy( obj.y ) ), obj.text, obj ); //{className: obj.className, anchor:obj.anchor, alignment:obj.alignment, fontSize:obj.fontSize}
             if ( textElement ) this.svg.appendChild( textElement );
         }
-        if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, {className:'headline'} ) );
+        if ( this.title ) svg.appendChild( this.text( 0, 1, this.title, { className: 'headline' } ) );
         //onmousemove='debounce(mousemove(event),20)' onmouseout='mouseout()'
         //<text id='mousex' dominant-baseline='hanging' x='0' y='0'></text>
         //<text id='mousey' dominant-baseline='baseline' x='0' y='${HEIGHT}'></text>
@@ -620,9 +637,9 @@ class Chartaholic {
         return [...Array( count ).keys()].map( d => max / ( count - 1 ) * parseInt( d ) )
     }
     isUSD( title ) {
-        title = title.replace( '-','/' );
+        title = title.replace( '-', '/' );
         if ( title.includes( "/USD" ) ) return true;
-        const stablecoins = ['BUSD','TUSD','USDC','PAX'];
+        const stablecoins = ['BUSD', 'TUSD', 'USDC', 'PAX'];
         for ( let asset of stablecoins ) {
             if ( title.includes( `/${ asset }` ) ) return true;
         }
@@ -706,7 +723,7 @@ class Chartaholic {
         this.style = this.theme == "light" || this.theme == "contrast" ? "light" : "dark";
         this.title = typeof options.title == "undefined" ? "" : options.title;
         this.keys = typeof options.keys == "undefined" ? {} : options.keys;
-        this.usd = typeof options.usd == "undefined" ? this.isUSD( this.title ): options.usd;
+        this.usd = typeof options.usd == "undefined" ? this.isUSD( this.title ) : options.usd;
         this.showAll = typeof options.showAll == "undefined" ? true : options.showAll;
         this.enableZoom = typeof options.enableZoom == "undefined" ? true : options.enableZoom;
         //indicator color overlay: filter: brightness(0.5) sepia(1) hue-rotate(65deg) saturate(5);
